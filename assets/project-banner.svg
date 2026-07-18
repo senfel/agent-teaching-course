@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" font-family="-apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="50%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+    <linearGradient id="prepGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="baseGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="advGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="hiGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#7e22ce"/>
+    </linearGradient>
+    <linearGradient id="realGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1200" height="520" fill="url(#bgGrad)"/>
+
+  <!-- 装饰背景圆点 -->
+  <g fill="#334155" opacity="0.4">
+    <circle cx="80" cy="60" r="2"/><circle cx="180" cy="100" r="1.5"/><circle cx="1140" cy="80" r="2"/>
+    <circle cx="1080" cy="40" r="1.5"/><circle cx="60" cy="480" r="2"/><circle cx="1150" cy="460" r="2"/>
+  </g>
+
+  <!-- 顶部标题区 -->
+  <g>
+    <text x="600" y="62" text-anchor="middle" font-size="42" font-weight="800" fill="url(#titleGrad)">Agent 教学课程 · 从零搭建你的 AI 助手</text>
+    <text x="600" y="92" text-anchor="middle" font-size="16" fill="#94a3b8">15 期课程 · 从注册第一个 API Key 到部署本地 Agent 服务 · 完整闭环</text>
+  </g>
+
+  <!-- 顶部右侧徽章 -->
+  <g transform="translate(1090,30)">
+    <rect x="0" y="0" width="90" height="26" rx="13" fill="#1e293b" stroke="#334155"/>
+    <text x="45" y="17" text-anchor="middle" font-size="11" fill="#cbd5e1">v1.0 · 教学</text>
+  </g>
+
+  <!-- 中部:课程地图 -->
+  <g transform="translate(40,130)">
+
+    <!-- 篇章 1: 准备篇 -->
+    <g>
+      <rect x="0" y="0" width="210" height="80" rx="12" fill="url(#prepGrad)" filter="url(#glow)"/>
+      <text x="105" y="28" text-anchor="middle" font-size="13" fill="#dbeafe" opacity="0.85">序章 · 准备篇</text>
+      <text x="105" y="52" text-anchor="middle" font-size="22" font-weight="700" fill="white">01 开工准备</text>
+      <text x="105" y="72" text-anchor="middle" font-size="11" fill="#bfdbfe">API Key · 环境搭建</text>
+    </g>
+
+    <!-- 箭头 -->
+    <line x1="215" y1="40" x2="240" y2="40" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 篇章 2: 基础篇 -->
+    <g transform="translate(245,0)">
+      <rect x="0" y="0" width="210" height="80" rx="12" fill="url(#baseGrad)" filter="url(#glow)"/>
+      <text x="105" y="28" text-anchor="middle" font-size="13" fill="#d1fae5" opacity="0.85">基础篇 · 单 Agent</text>
+      <text x="105" y="52" text-anchor="middle" font-size="20" font-weight="700" fill="white">02-06 能力构建</text>
+      <text x="105" y="72" text-anchor="middle" font-size="11" fill="#a7f3d0">对话 · 记忆 · Prompt · Tool · Skills</text>
+    </g>
+
+    <line x1="460" y1="40" x2="485" y2="40" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 篇章 3: 进阶篇 -->
+    <g transform="translate(490,0)">
+      <rect x="0" y="0" width="210" height="80" rx="12" fill="url(#advGrad)" filter="url(#glow)"/>
+      <text x="105" y="28" text-anchor="middle" font-size="13" fill="#fef3c7" opacity="0.85">进阶篇 · 脑和手</text>
+      <text x="105" y="52" text-anchor="middle" font-size="20" font-weight="700" fill="white">07-10 能力扩展</text>
+      <text x="105" y="72" text-anchor="middle" font-size="11" fill="#fde68a">记忆系统 · Todo · Subagent · Team</text>
+    </g>
+
+    <line x1="705" y1="40" x2="730" y2="40" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 篇章 4: 高阶篇 -->
+    <g transform="translate(735,0)">
+      <rect x="0" y="0" width="210" height="80" rx="12" fill="url(#hiGrad)" filter="url(#glow)"/>
+      <text x="105" y="28" text-anchor="middle" font-size="13" fill="#f3e8ff" opacity="0.85">高阶篇 · 边界</text>
+      <text x="105" y="52" text-anchor="middle" font-size="20" font-weight="700" fill="white">11-13 协议扩展</text>
+      <text x="105" y="72" text-anchor="middle" font-size="11" fill="#ddd6fe">MCP · Hooks · 多模型路由</text>
+    </g>
+
+    <line x1="950" y1="40" x2="975" y2="40" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 篇章 5: 实战篇 -->
+    <g transform="translate(980,0)">
+      <rect x="0" y="0" width="145" height="80" rx="12" fill="url(#realGrad)" filter="url(#glow)"/>
+      <text x="72" y="28" text-anchor="middle" font-size="13" fill="#fee2e2" opacity="0.85">实战篇</text>
+      <text x="72" y="52" text-anchor="middle" font-size="20" font-weight="700" fill="white">14-15</text>
+      <text x="72" y="72" text-anchor="middle" font-size="11" fill="#fecaca">目标驱动 · 部署</text>
+    </g>
+  </g>
+
+  <!-- 中下:能力跃迁曲线 -->
+  <g transform="translate(40,240)">
+    <text x="0" y="0" font-size="12" fill="#94a3b8">能力跃迁</text>
+    <path d="M 0 50 Q 120 48 240 42 T 480 30 T 720 18 T 1120 6" stroke="#60a5fa" stroke-width="2" fill="none" opacity="0.6"/>
+    <circle cx="0" cy="50" r="3" fill="#3b82f6"/>
+    <circle cx="245" cy="42" r="3" fill="#10b981"/>
+    <circle cx="490" cy="30" r="3" fill="#f59e0b"/>
+    <circle cx="735" cy="18" r="3" fill="#a855f7"/>
+    <circle cx="1052" cy="6" r="3" fill="#ef4444"/>
+  </g>
+
+  <!-- 底部:4 件套 + 特性 -->
+  <g transform="translate(40,330)">
+    <text x="0" y="0" font-size="14" font-weight="700" fill="#e2e8f0">每期 4 件套交付</text>
+    <line x1="0" y1="8" x2="1120" y2="8" stroke="#334155" stroke-width="1"/>
+
+    <!-- 4 件套 -->
+    <g transform="translate(0,20)">
+      <g>
+        <rect x="0" y="0" width="130" height="56" rx="8" fill="#1e293b" stroke="#334155"/>
+        <text x="65" y="24" text-anchor="middle" font-size="22">💻</text>
+        <text x="65" y="46" text-anchor="middle" font-size="12" fill="#cbd5e1">code 单文件</text>
+      </g>
+      <g transform="translate(145,0)">
+        <rect x="0" y="0" width="130" height="56" rx="8" fill="#1e293b" stroke="#334155"/>
+        <text x="65" y="24" text-anchor="middle" font-size="22">📖</text>
+        <text x="65" y="46" text-anchor="middle" font-size="12" fill="#cbd5e1">doc 五段文档</text>
+      </g>
+      <g transform="translate(290,0)">
+        <rect x="0" y="0" width="130" height="56" rx="8" fill="#1e293b" stroke="#334155"/>
+        <text x="65" y="24" text-anchor="middle" font-size="22">🎯</text>
+        <text x="65" y="46" text-anchor="middle" font-size="12" fill="#cbd5e1">ppt 提词器</text>
+      </g>
+      <g transform="translate(435,0)">
+        <rect x="0" y="0" width="130" height="56" rx="8" fill="#1e293b" stroke="#334155"/>
+        <text x="65" y="24" text-anchor="middle" font-size="22">🖼️</text>
+        <text x="65" y="46" text-anchor="middle" font-size="12" fill="#cbd5e1">cards 知识卡片</text>
+      </g>
+    </g>
+
+    <!-- 分隔线 -->
+    <line x1="595" y1="10" x2="595" y2="70" stroke="#334155"/>
+
+    <!-- 差异化特性 -->
+    <g transform="translate(615,20)">
+      <text x="0" y="0" font-size="14" font-weight="700" fill="#e2e8f0">与同类项目差异</text>
+      <g transform="translate(0,14)">
+        <circle cx="6" cy="8" r="3" fill="#60a5fa"/>
+        <text x="18" y="12" font-size="12" fill="#cbd5e1">厂商中立 · DeepSeek 入门,多模型路由收尾</text>
+      </g>
+      <g transform="translate(0,32)">
+        <circle cx="6" cy="8" r="3" fill="#a78bfa"/>
+        <text x="18" y="12" font-size="12" fill="#cbd5e1">现代职场人设 · CTO + 技术助理团队场景</text>
+      </g>
+      <g transform="translate(0,50)">
+        <circle cx="6" cy="8" r="3" fill="#f472b6"/>
+        <text x="18" y="12" font-size="12" fill="#cbd5e1">累积式代码 · 每期只新增一个能力,可随时 checkout</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- 底部标语条 -->
+  <g transform="translate(40,470)">
+    <rect x="0" y="0" width="1120" height="36" rx="8" fill="#0f172a" stroke="#1d4ed8" stroke-width="1" opacity="0.8"/>
+    <text x="560" y="23" text-anchor="middle" font-size="14" fill="#60a5fa">🚀 零基础:01 开始按序学 · 有 LLM 经验:跳到 03 · 做产品:重点 07/10/12/14/15</text>
+  </g>
+</svg>

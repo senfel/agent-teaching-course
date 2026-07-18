@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 01 期 · 认识 Agent + 开工准备</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 76px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 18px; }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 16px; line-height: 1.65; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.85; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .center-row { display: flex; align-items: center; justify-content: center; gap: 60px; flex-wrap: wrap; }
+  .diagram { max-width: 520px; width: 100%; }
+  .big-num { font-size: 96px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 22px; color: #b8c5d6; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 01</div>
+    <div class="slide-num">01 / 10</div>
+    <h1>认识 Agent<br>开工准备</h1>
+    <div class="subtitle">F R O M&nbsp;&nbsp;Z E R O&nbsp;&nbsp;T O&nbsp;&nbsp;A G E N T</div>
+    <div class="meta">15 期系列 · 第 1 期 · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:640px;">你用过 ChatGPT、用过豆包,但想过它们到底怎么做的吗?<br>这个系列,从注册第一个 API Key 开始,一步步把一个能用的 AI 助手搭出来。</p>
+  </section>
+
+  <!-- Slide 2: LLM vs Agent -->
+  <section class="slide">
+    <div class="slide-tag">CONCEPT</div>
+    <div class="slide-num">02 / 10</div>
+    <h2>LLM vs Agent —— 别再混着用</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>🧠 LLM</h3>
+        <p style="font-size:18px;">大语言模型,输入文本/图像/音频<br>输出文本(多模态:GPT-4o 看图、Gemini 听声音)</p>
+        <p style="font-size:18px;"><span class="warn">只会"生成"</span>,无记忆、无手脚</p>
+        <p style="font-size:18px;color:#6b7a99;">类比:博学但无手脚的顾问</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>🤖 Agent</h3>
+        <p style="font-size:18px;">以 LLM 为大脑,能调工具、保记忆、自主循环</p>
+        <p style="font-size:18px;"><span class="hi">能"说"也能"做"</span></p>
+        <p style="font-size:18px;color:#6b7a99;">类比:有手有脚的助理</p>
+      </div>
+    </div>
+    <p style="text-align:center; margin-top:24px; font-size:22px; color:#00d4ff;">后续 14 期 = 给 LLM 装上 <span class="hi">手脚</span> 和 <span class="hi">脑子</span></p>
+    <p style="text-align:center; margin-top:16px; font-size:16px; color:#6b7a99;">很多人把这两个概念混着用,但它们不是一回事。LLM 只会"说",你问它什么它都能答,但它没法替你查文件、没法替你发邮件。</p>
+  </section>
+
+  <!-- Slide 3: Agent 公式 -->
+  <section class="slide">
+    <div class="slide-tag">FORMULA</div>
+    <div class="slide-num">03 / 10</div>
+    <h2>Agent 的组成公式</h2>
+    <div style="display:flex; align-items:center; justify-content:center; gap:24px; flex-wrap:wrap; margin:40px 0;">
+      <div style="text-align:center;">
+        <div class="big-num">LLM</div>
+        <div class="big-label">大脑</div>
+      </div>
+      <div style="font-size:48px; color:#00d4ff;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num">TOOLS</div>
+        <div class="big-label">手脚</div>
+      </div>
+      <div style="font-size:48px; color:#00d4ff;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num">MEM</div>
+        <div class="big-label">脑子</div>
+      </div>
+      <div style="font-size:48px; color:#00d4ff;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num">LOOP</div>
+        <div class="big-label">意志</div>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:26px; color:#e8ecf5; margin-top:20px;">= <span style="color:#00d4ff; font-weight:700;">AGENT</span></p>
+    <p style="text-align:center; margin-top:16px; font-size:16px; color:#6b7a99;">这个系列 15 期,就是给 LLM 装上四样东西。02-04 装手脚,05-06 装工具,07-10 装脑子和协作,11-15 装边界和落地。</p>
+  </section>
+
+  <!-- Slide 4: 课程地图 -->
+  <section class="slide">
+    <div class="slide-tag">ROADMAP</div>
+    <div class="slide-num">04 / 10</div>
+    <h2>15 期课程地图</h2>
+    <table>
+      <thead>
+        <tr><th>篇章</th><th>期号</th><th>核心能力</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>准备篇</strong></td><td>01</td><td>认识 Agent + 开工准备</td></tr>
+        <tr><td><strong>基础篇</strong></td><td>02-06</td><td>循环 · history · system prompt · tool · skills</td></tr>
+        <tr><td><strong>进阶篇</strong></td><td>07-10</td><td>记忆 · 规划 · 子代理 · 团队</td></tr>
+        <tr><td><strong>高阶篇</strong></td><td>11-13</td><td>MCP · Hooks · 多模型路由</td></tr>
+        <tr><td><strong>实战篇</strong></td><td>14-15</td><td>目标驱动 · 部署上线</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">累积式写法:每期保留前期全部代码,只新增一个能力。<span class="hi">step11 = step10 + MCP</span>,你随时 checkout 到任意一期继续学。</p>
+  </section>
+
+  <!-- Slide 5: 开工 4 步 -->
+  <section class="slide">
+    <div class="slide-tag">GET STARTED</div>
+    <div class="slide-num">05 / 10</div>
+    <h2>开工准备 · 4 步</h2>
+    <ol>
+      <li><strong>注册账号</strong> — platform.deepseek.com,手机号 + 实名</li>
+      <li><strong>充值额度</strong> — 10 元够学完整套课程</li>
+      <li><strong>创建 API Key</strong> — 只显示一次,保存好</li>
+      <li><strong>本地环境</strong> — 装依赖 + 配 `.env`</li>
+    </ol>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">为什么选 DeepSeek?便宜、国内能访问,够学完整套课程。后面第 13 期教你怎么切换到 Claude、切到本地模型。</p>
+  </section>
+
+  <!-- Slide 6: 本地环境命令 -->
+  <section class="slide">
+    <div class="slide-tag">SETUP</div>
+    <div class="slide-num">06 / 10</div>
+    <h2>本地环境 · 4 条命令</h2>
+    <p style="margin-top:0; margin-bottom:14px; font-size:15px; color:#6b7a99;">先装 Python 3.10+:python.org 下载,Windows 务必勾 <code style="color:#00d4ff;">Add to PATH</code>。再用虚拟环境锁依赖,不污染系统。</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+      <div>
+        <p style="margin:0 0 8px; color:#00d4ff; font-size:15px;">macOS / Linux</p>
+        <pre style="margin:0;"><code><span class="com"># 1. 创建(只需一次)</span>
+python3 -m venv .venv
+
+<span class="com"># 2. 激活(每次开终端都做)</span>
+<span class="kw">source</span> .venv/bin/activate
+
+<span class="com"># 3. 装依赖</span>
+pip install -r requirements.txt
+
+<span class="com"># 4. 配 Key</span>
+cp .env.example .env</code></pre>
+      </div>
+      <div>
+        <p style="margin:0 0 8px; color:#00d4ff; font-size:15px;">Windows(PowerShell)</p>
+        <pre style="margin:0;"><code><span class="com"># 1. 创建(只需一次)</span>
+python -m venv .venv
+
+<span class="com"># 2. 激活(每次开终端都做)</span>
+.venv\Scripts\activate
+
+<span class="com"># 3. 装依赖</span>
+pip install -r requirements.txt
+
+<span class="com"># 4. 配 Key</span>
+copy .env.example .env</code></pre>
+      </div>
+    </div>
+    <p style="margin-top:14px; font-size:14px; color:#6b7a99;">激活成功提示符前会出现 <code style="color:#00d4ff;">(.venv)</code>。若直接跑报 <code style="color:#00d4ff;">No module named 'dotenv'</code>,说明忘了激活;Windows 激活报"禁止运行脚本",执行一次 <code style="color:#00d4ff;">Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code>。</p>
+  </section>
+
+  <!-- Slide 7: 第一次调用 -->
+  <section class="slide">
+    <div class="slide-tag">FIRST CALL</div>
+    <div class="slide-num">07 / 10</div>
+    <h2>第一次调用 · 6 行代码</h2>
+    <pre><code><span class="kw">from</span> openai <span class="kw">import</span> OpenAI
+
+client = <span class="fn">OpenAI</span>(
+    api_key=os.<span class="fn">environ</span>[<span class="str">"DEEPSEEK_API_KEY"</span>],
+    base_url=<span class="str">"https://api.deepseek.com"</span>,   <span class="com"># ← 关键</span>
+)
+
+response = client.chat.completions.<span class="fn">create</span>(
+    model=<span class="str">"deepseek-chat"</span>,
+    messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"你好"</span>}],
+)
+<span class="fn">print</span>(response.choices[<span class="var">0</span>].message.content)</code></pre>
+    <p style="margin-top:18px;">DeepSeek 兼容 OpenAI 协议,改 <code style="color:#00d4ff;">base_url</code> 即可。</p>
+    <p style="margin-top:12px; font-size:16px; color:#6b7a99;">运行 <code style="color:#00d4ff;">python code/step01_hello_agent.py</code> 后,程序会自动问 3 个问题感受能力,然后进入自由对话模式(用 <code style="color:#00d4ff;">prompt_toolkit</code>,退格/光标/历史都正常,输错按 Ctrl-C 作废本行不退出)。</p>
+  </section>
+
+  <!-- Slide 8: 为什么不用官方 SDK -->
+  <section class="slide">
+    <div class="slide-tag">WHY</div>
+    <div class="slide-num">08 / 10</div>
+    <h2>为什么不用官方 SDK?</h2>
+    <p>DeepSeek <span class="warn">没有独立 SDK</span>,官方推荐用 <code style="color:#00d4ff;">openai</code> SDK + 改 <code style="color:#00d4ff;">base_url</code>。</p>
+    <div class="cols" style="margin-top:24px;">
+      <div class="col">
+        <h3>✅ 好处</h3>
+        <p style="font-size:17px;">几乎零成本切换厂商</p>
+        <p style="font-size:17px;">代码逻辑不用改</p>
+        <p style="font-size:17px;">生态成熟、文档全</p>
+      </div>
+      <div class="col">
+        <h3>🔄 切换示例</h3>
+        <pre style="margin:0; padding:14px;"><code><span class="com"># OpenAI</span>
+base_url=<span class="str">"...api.openai.com/v1"</span>
+
+<span class="com"># 月之暗面</span>
+base_url=<span class="str">"...api.moonshot.cn/v1"</span>
+
+<span class="com"># 智谱</span>
+base_url=<span class="str">"...bigmodel.cn/api/paas/v4"</span></code></pre>
+      </div>
+    </div>
+    <p style="margin-top:16px; text-align:center; font-size:18px; color:#6b7a99;">第 13 期详细讲多模型路由</p>
+  </section>
+
+  <!-- Slide 9: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">09 / 10</div>
+    <h2>试一试 · 4 个伏笔</h2>
+    <ul>
+      <li>改 <code style="color:#00d4ff;">DEEPSEEK_MODEL</code> 为 <code style="color:#00d4ff;">deepseek-reasoner</code>,对比回答</li>
+      <li>在控制台看每次调用消耗多少 <span class="hi">token</span></li>
+      <li>问"现在几点?" —— <span class="warn">为第 05 期 Tool Use 埋伏笔</span><br><span style="font-size:14px; color:#6b7a99;">看看它怎么答,你会发现它其实不知道当前时间,只是"背"出来的</span></li>
+      <li>连续问三次同样问题 —— <span class="warn">为第 03 期 history 埋伏笔</span><br><span style="font-size:14px; color:#6b7a99;">每次回答略有不同,因为它没有上下文</span></li>
+    </ul>
+    <div style="margin-top:32px; padding:20px; background:rgba(0,212,255,0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 学完这一期,你应该能跑通 <code style="color:#00d4ff;">python code/step01_hello_agent.py</code>,并理解 LLM 与 Agent 的区别。</p>
+    </div>
+  </section>
+
+  <!-- Slide 10: 下一期预告 -->
+  <section class="slide cover">
+    <div class="slide-tag">NEXT</div>
+    <div class="slide-num">10 / 10</div>
+    <h1 style="font-size:60px;">第 02 期<br>连续对话</h1>
+    <div class="subtitle" style="margin-top:32px;">L O O P&nbsp;&nbsp;W I T H O U T&nbsp;&nbsp;M E M O R Y</div>
+    <p style="margin-top:40px; font-size:22px; color:#b8c5d6; max-width:640px;">你会发现这一期的程序"金鱼记忆"——<br>问完就忘。下一期,我们解决它。</p>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99; max-width:640px;">你前脚问"我叫张三",后脚问"我姓什么",它答不上来。这个"金鱼记忆"问题,下一期解决。</p>
+    <p style="margin-top:40px; font-size:14px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:2px;">— END OF EPISODE 01 —</p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 10</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
