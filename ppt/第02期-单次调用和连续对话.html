@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 02 期 · 单次调用 → 连续对话</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 76px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 18px; }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 16px; line-height: 1.65; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.85; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .big-num { font-size: 88px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 20px; color: #b8c5d6; margin-top: 8px; }
+
+  .chat-box { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 10px; padding: 18px 22px; margin: 8px 0; font-size: 16px; line-height: 1.6; }
+  .chat-box .u { color: #e8ecf5; }
+  .chat-box .a { color: #b8c5d6; }
+  .chat-box .tok { color: #6b7a99; font-family: "SF Mono", Menlo, monospace; font-size: 13px; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 02</div>
+    <div class="slide-num">01 / 10</div>
+    <h1>单次调用<br>→ 连续对话</h1>
+    <div class="subtitle">L O O P&nbsp;&nbsp;W I T H O U T&nbsp;&nbsp;M E M O R Y</div>
+    <div class="meta">15 期系列 · 第 2 期 · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:640px;">第 01 期你跑通了第一次调用。但只要多问两句,它就露馅了——<br>前脚告诉它"我叫张三",后脚问"我姓什么",它答不上来。</p>
+  </section>
+
+  <!-- Slide 2: 金鱼记忆演示 -->
+  <section class="slide">
+    <div class="slide-tag">DEMO</div>
+    <div class="slide-num">02 / 10</div>
+    <h2>循环有了 · 记忆没来</h2>
+    <div class="chat-box">
+      <div class="u">你: 我叫张三,是一名 Python 后端工程师</div>
+      <div class="a">Alex: 你好,张三!很高兴认识你……</div>
+    </div>
+    <div class="chat-box">
+      <div class="u">你: 我姓什么?我是做什么工作的?</div>
+      <div class="a">Alex: 抱歉,我不知道你姓什么,也没法知道你的职业……</div>
+      <div class="tok">↑ 上一句刚说,这一句就忘了</div>
+    </div>
+    <p style="margin-top:20px; text-align:center; font-size:20px; color:#ffb400;">明明上一句刚说过,下一句就忘了</p>
+    <p style="margin-top:12px; font-size:16px; color:#6b7a99;">这不是 DeepSeek 的毛病,OpenAI、Claude、Gemini 都一样。原因在下一页:API 是无状态的。</p>
+  </section>
+
+  <!-- Slide 3: 核心公式:无状态 -->
+  <section class="slide">
+    <div class="slide-tag">FORMULA</div>
+    <div class="slide-num">03 / 10</div>
+    <h2>真相:API 是无状态的</h2>
+    <div style="display:flex; align-items:center; justify-content:center; gap:30px; flex-wrap:wrap; margin:30px 0;">
+      <div style="text-align:center;">
+        <div class="big-num">请求 A</div>
+        <div class="big-label">"我叫张三"</div>
+      </div>
+      <div style="font-size:48px; color:#6b7a99;">≠</div>
+      <div style="text-align:center;">
+        <div class="big-num">请求 B</div>
+        <div class="big-label">"我姓什么"</div>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:22px; color:#e8ecf5; margin-top:16px;">服务器把 <span class="warn">每一次</span> 请求当成全新对话</p>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">模型不记得上一句,是因为你根本没把上一句发给它。"连续对话"是客户端伪造出来的幻觉——你维护一份历史,每次一起发过去,下一期就这么做。</p>
+  </section>
+
+  <!-- Slide 4: 本期在课程地图的位置 -->
+  <section class="slide">
+    <div class="slide-tag">ROADMAP</div>
+    <div class="slide-num">04 / 10</div>
+    <h2>本期位置 · 基础篇第 1 步</h2>
+    <table>
+      <thead>
+        <tr><th>期号</th><th>主题</th><th>状态</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>01</td><td>认识 Agent + 开工准备</td><td style="color:#6b7a99;">已完成</td></tr>
+        <tr><td><strong>02</strong></td><td><strong>单次调用 → 连续对话</strong></td><td style="color:#00d4ff;">← 本期</td></tr>
+        <tr><td>03</td><td>短期记忆 history</td><td style="color:#ffb400;">下期解决记忆</td></tr>
+        <tr><td>04</td><td>System Prompt 人设</td><td style="color:#6b7a99;">待做</td></tr>
+        <tr><td>05</td><td>Tool Use 工具调用</td><td style="color:#6b7a99;">待做</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">本期先把"连续对话"的形式搭起来(while 循环),但 <span class="warn">故意不传 history</span>,把痛点暴露透,下一期再动手解决。先看见问题,再解决问题。</p>
+  </section>
+
+  <!-- Slide 5: 本期 3 个动作 -->
+  <section class="slide">
+    <div class="slide-tag">STEPS</div>
+    <div class="slide-num">05 / 10</div>
+    <h2>本期 3 个动作</h2>
+    <ol>
+      <li><strong>while 循环</strong> — 把"一问一答"串成连续对话的形式</li>
+      <li><strong>故意不传 history</strong> — messages 里永远只有当前一句,暴露金鱼记忆</li>
+      <li><strong>token 计数可视化</strong> — 读 response.usage,看到上下文是空的</li>
+    </ol>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99;">第 3 步是关键伏笔:你会发现每次调用的 prompt_tokens 都很小(就一句话)。下一期加上 history 后,这个数字会越滚越大——那就是上下文长度问题的由来。</p>
+  </section>
+
+  <!-- Slide 6: 运行命令 -->
+  <section class="slide">
+    <div class="slide-tag">RUN</div>
+    <div class="slide-num">06 / 10</div>
+    <h2>运行起来</h2>
+    <pre><code><span class="com"># 激活虚拟环境后</span>
+<span class="kw">python</span> code/step02_loop_no_memory.py</code></pre>
+    <p style="margin-top:18px;">程序会先自动演示"金鱼记忆",再进入自由对话。</p>
+    <p style="margin-top:12px; font-size:16px; color:#6b7a99;">自动演示部分连问两个有上下文依赖的问题,你能直观看到模型答不上来——这比讲十句概念都管用。</p>
+  </section>
+
+  <!-- Slide 7: 核心代码 -->
+  <section class="slide">
+    <div class="slide-tag">CODE</div>
+    <div class="slide-num">07 / 10</div>
+    <h2>核心代码 · 只传当前一句</h2>
+    <pre><code><span class="kw">def</span> <span class="fn">chat</span>(user_input: <span class="kw">str</span>) -> <span class="kw">tuple</span>[<span class="kw">str</span>, <span class="kw">int</span>, <span class="kw">int</span>]:
+    response = client.chat.completions.<span class="fn">create</span>(
+        model=MODEL,
+        messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: user_input}],  <span class="com"># ← 只有这一句</span>
+        max_tokens=<span class="var">1000</span>,
+    )
+    answer = response.choices[<span class="var">0</span>].message.content
+    usage = response.usage
+    <span class="kw">return</span> answer, usage.prompt_tokens, usage.completion_tokens</code></pre>
+    <p style="margin-top:16px;"><span class="warn">关键</span>:messages 里永远只有当前这一句,模型看不到上一句——这就是金鱼记忆的代码真相。</p>
+    <p style="margin-top:12px; font-size:16px; color:#6b7a99;">下一期只需要在这里动刀:把 messages 换成一份历史列表,每次回灌进去,模型就"记得"了。</p>
+  </section>
+
+  <!-- Slide 8: Why 循环 + token -->
+  <section class="slide">
+    <div class="slide-tag">WHY</div>
+    <div class="slide-num">08 / 10</div>
+    <h2>为什么加 token 可视化?</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>📊 看见上下文是空的</h3>
+        <p style="font-size:17px;">每次 prompt_tokens 都很小(就一句话)</p>
+        <p style="font-size:17px;">直观看到"没传历史"</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>🔮 下期对比基准</h3>
+        <p style="font-size:17px;">下期加 history 后,prompt 越滚越大</p>
+        <p style="font-size:17px;">到时候回来对比,理解上下文长度问题</p>
+      </div>
+    </div>
+    <p style="margin-top:24px; text-align:center; font-size:20px; color:#b8c5d6;">DeepSeek 返回的 <code style="color:#00d4ff;">response.usage</code> 里有三个字段</p>
+    <p style="margin-top:8px; text-align:center; font-size:16px; color:#6b7a99;">prompt_tokens(输入) · completion_tokens(输出) · total_tokens(合计)</p>
+  </section>
+
+  <!-- Slide 9: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">09 / 10</div>
+    <h2>试一试 · 4 个伏笔</h2>
+    <ul>
+      <li><strong>复本金鱼记忆</strong> — 先说"我叫张三",再问"我姓什么"<br><span style="font-size:14px; color:#6b7a99;">亲眼看到它答不上来,比读十句概念都管用</span></li>
+      <li><strong>观察 prompt_tokens</strong> — 每次调用的 prompt 是多少?为什么这么小?<br><span style="font-size:14px; color:#6b7a99;">下期加 history 后再回来对比,你会恍然大悟</span></li>
+      <li><strong>输入 reset</strong> — <span class="warn">程序会提示"本期尚未实现记忆"</span><br><span style="font-size:14px; color:#6b7a99;">这行代码是故意留的伏笔,第 03 期会真正实现它</span></li>
+      <li><strong>思考题</strong> — 想让模型记住上一句,最朴素的办法是?<br><span style="font-size:14px; color:#6b7a99;">答案就是下一期:把上一轮问答塞进 messages 一起发过去</span></li>
+    </ul>
+    <div style="margin-top:28px; padding:20px; background:rgba(0,212,255,0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 学完这一期,你应该能跑通循环对话,并理解"金鱼记忆"是 API 无状态导致的,不是模型笨。</p>
+    </div>
+  </section>
+
+  <!-- Slide 10: 下一期预告 -->
+  <section class="slide cover">
+    <div class="slide-tag">NEXT</div>
+    <div class="slide-num">10 / 10</div>
+    <h1 style="font-size:60px;">第 03 期<br>短期记忆 history</h1>
+    <div class="subtitle" style="margin-top:32px;">M E S S A G E S&nbsp;&nbsp;R E C A L L</div>
+    <p style="margin-top:40px; font-size:22px; color:#b8c5d6; max-width:640px;">维护一个 messages 列表,每次把完整对话历史回灌进去,<br>让模型真正"记住"上一句。</p>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99; max-width:640px;">但历史不能无限长——上下文长度限制是个新问题,第 03 期一并聊。</p>
+    <p style="margin-top:40px; font-size:14px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:2px;">— END OF EPISODE 02 —</p>
+    <p style="margin-top:24px; font-size:15px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:1px;">源码地址 · <a href="https://github.com/senfel/agent-teaching-course.git" style="color:#00d4ff; text-decoration:none; border-bottom:1px solid rgba(0,212,255,0.5);">github.com/senfel/agent-teaching-course</a></p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 10</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
