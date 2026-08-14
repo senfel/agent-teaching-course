@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# 环境配置
+.env
+.local/
+
+# Agent 运行时生成
+memory/*.jsonl
+memory/*.md
+!memory/.gitkeep
+.hooks_audit.jsonl
+.team/
+*.log
