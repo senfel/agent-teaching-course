@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 06 期 · Skills 按需加载</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 76px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 18px; }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 16px; line-height: 1.65; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+  .ok { background: rgba(16, 185, 129, 0.16); padding: 2px 8px; border-radius: 4px; color: #10b981; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.85; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .big-num { font-size: 88px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 20px; color: #b8c5d6; margin-top: 8px; }
+
+  .chat-box { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 10px; padding: 18px 22px; margin: 8px 0; font-size: 16px; line-height: 1.6; }
+  .chat-box .u { color: #e8ecf5; }
+  .chat-box .a { color: #b8c5d6; }
+  .chat-box .tok { color: #6b7a99; font-family: "SF Mono", Menlo, monospace; font-size: 13px; margin-top: 6px; }
+
+  .msg-list { background: rgba(16, 185, 129, 0.06); border: 1px dashed rgba(16, 185, 129, 0.4); border-radius: 10px; padding: 16px 20px; margin: 8px 0; font-family: "SF Mono", Menlo, monospace; font-size: 14px; line-height: 1.7; color: #a8b5cc; }
+  .msg-list .role-s { color: #f472b6; }
+  .msg-list .role-u { color: #60a5fa; }
+  .msg-list .role-a { color: #a78bfa; }
+  .msg-list .role-t { color: #34d399; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 06</div>
+    <div class="slide-num">01 / 11</div>
+    <h1>Skills<br>按需加载</h1>
+    <div class="subtitle">S K I L L S&nbsp;&nbsp;O N&nbsp;&nbsp;D E M A N D</div>
+    <div class="meta">15 期系列 · 第 6 期 · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:680px;">第 05 期 Alex 装上了"手",2 个工具还好——20 个工具全塞进 TOOLS 会怎样?<br>这一期,用 skills/ 目录 + SKILL.md,让 Agent 平时只记住"我会什么",用到时才翻开"操作手册"。</p>
+  </section>
+
+  <!-- Slide 2: 问题回顾 -->
+  <section class="slide">
+    <div class="slide-tag">PROBLEM</div>
+    <div class="slide-num">02 / 11</div>
+    <h2>回顾:工具多了怎么办?</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>2 个工具(第 05 期)</h3>
+        <div class="msg-list" style="font-size:15px;">
+          TOOLS = [get_current_time, calculate]<br><br>
+          每次 API 调用携带 schema<br>
+          ≈ 300 token<br>
+          <span style="color:#10b981;">✓ 无压力</span>
+        </div>
+        <p style="font-size:16px; color:#6b7a99; margin-top:12px;">问题没暴露,因为只有两个</p>
+      </div>
+      <div class="col" style="border-color: rgba(255,180,0,0.5); background: rgba(255,180,0,0.06);">
+        <h3 style="color:#ffb400;">20 个工具呢?</h3>
+        <div class="msg-list" style="font-size:15px; border-color:rgba(255,180,0,0.4); background:rgba(255,180,0,0.04);">
+          每个 schema 100-200 token<br>
+          20 个 ≈ 2000-4000 token / 每轮<br>
+          问"你好"也要付这笔钱<br>
+          <span style="color:#ffb400;">✗ 选项多,模型还容易选错</span>
+        </div>
+        <p style="font-size:16px; color:#6b7a99; margin-top:12px;">知识也一样:想让 Alex 精通 Git 排错、代码评审、部署流程……全塞 system prompt?</p>
+      </div>
+    </div>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">本质问题:<span class="warn">能力是无限的,上下文是有限的</span>。Agent 需要像人一样——平时只记住"我会什么",用到时才翻开手册。</p>
+  </section>
+
+  <!-- Slide 3: 核心概念 -->
+  <section class="slide">
+    <div class="slide-tag">CONCEPT</div>
+    <div class="slide-num">03 / 11</div>
+    <h2>Skills = 技能库 + 两级加载</h2>
+    <div style="display:flex; align-items:center; justify-content:center; gap:20px; flex-wrap:wrap; margin:20px 0;">
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">索引</div>
+        <div class="big-label">name + description<br>常驻 system prompt</div>
+      </div>
+      <div style="font-size:36px; color:#6b7a99;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">load_skill</div>
+        <div class="big-label">工具:模型自己决定<br>何时翻开哪本手册</div>
+      </div>
+      <div style="font-size:36px; color:#6b7a99;">=</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px; background: linear-gradient(135deg, #10b981 0%, #047857 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">按需加载</div>
+        <div class="big-label">20 个技能<br>只付索引的 token</div>
+      </div>
+    </div>
+    <div style="margin-top:24px; padding:20px; background:rgba(0, 212, 255, 0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:18px; color:#b8c5d6;">💡 对应人类的两种记忆:<span class="hi">索引 = 目录页</span>(几十字,常驻),<span class="hi">SKILL.md = 操作手册</span>(几千字,用完即走)</p>
+    </div>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">每个技能 = 一个目录 + 一份 SKILL.md。frontmatter 只放 name 和 description——description 就是路由依据。</p>
+  </section>
+
+  <!-- Slide 4: 课程地图 -->
+  <section class="slide">
+    <div class="slide-tag">ROADMAP</div>
+    <div class="slide-num">04 / 11</div>
+    <h2>本期位置 · 基础篇收官</h2>
+    <table>
+      <thead>
+        <tr><th>期号</th><th>主题</th><th>Agent 能力</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>01</td><td>认识 Agent + 开工准备</td><td style="color:#6b7a99;">第一次调用</td></tr>
+        <tr><td>02</td><td>单次调用 → 连续对话</td><td style="color:#ffb400;">循环(无记忆)</td></tr>
+        <tr><td>03</td><td>短期记忆 history</td><td style="color:#00d4ff;">记忆(无身份)</td></tr>
+        <tr><td>04</td><td>System Prompt 人设</td><td style="color:#a78bfa;">记忆 + 身份</td></tr>
+        <tr><td>05</td><td>Tool Use 工具调用</td><td style="color:#34d399;">+ 工具(会动手)</td></tr>
+        <tr><td><strong>06</strong></td><td><strong>Skills 按需加载</strong></td><td style="color:#10b981;">← 本期:+ 技能库(能力可扩展)</td></tr>
+        <tr><td>07</td><td>记忆系统</td><td style="color:#6b7a99;">跨会话长期记忆(进阶篇开始)</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">02-06 基础篇五期收官:循环 → 记忆 → 身份 → 工具 → 技能。Agent 的"手脚"齐了,接下来 07-10 装"脑子"。</p>
+  </section>
+
+  <!-- Slide 5: SKILL.md 结构 -->
+  <section class="slide">
+    <div class="slide-tag">STRUCTURE</div>
+    <div class="slide-num">05 / 11</div>
+    <h2>SKILL.md · frontmatter + 正文</h2>
+    <div class="cols">
+      <div class="col" style="padding:20px;">
+        <pre style="margin:0;"><code><span class="var">---</span>
+<span class="fn">name</span>: git-cheatsheet
+<span class="fn">description</span>: Git 命令速查。当用户问
+  "怎么撤销提交""怎么回退版本"
+  等问题时使用。
+<span class="var">---</span>
+
+<span class="com"># Git 速查(正文,给模型看)</span>
+
+| 场景 | 命令 |
+|---|---|
+| 撤销提交(保留修改) | reset --soft HEAD~1 |
+| 回退版本 | reset --hard &lt;commit&gt;</code></pre>
+      </div>
+      <div class="col">
+        <h3>两个必填字段</h3>
+        <ul>
+          <li><code style="color:#00d4ff;">name</code> — 技能名,与目录名一致(load_skill 按目录查找)</li>
+          <li><code style="color:#00d4ff;">description</code> — <strong>什么时候用</strong>,模型的路由依据</li>
+        </ul>
+        <h3 style="margin-top:18px;">本期两个示例技能</h3>
+        <table style="font-size:16px;">
+          <tr><td><strong>weather</strong></td><td>流程型:流程 + 模拟规则 + 模板 + 边界</td></tr>
+          <tr><td><strong>git-cheatsheet</strong></td><td>知识型:速查表本身,加载即答案</td></tr>
+        </table>
+      </div>
+    </div>
+    <p style="margin-top:12px; font-size:16px; color:#6b7a99;">frontmatter 只需 name + description 两个字段——解析都不用 pyyaml,按行 partition(":") 就够。git-cheatsheet 是学员亲手写的第一个技能。</p>
+  </section>
+
+  <!-- Slide 6: 两级加载流程 -->
+  <section class="slide">
+    <div class="slide-tag">CORE</div>
+    <div class="slide-num">06 / 11</div>
+    <h2>两级加载 · 索引常驻,全文按需</h2>
+    <div class="msg-list">
+      <span style="color:#f472b6;">启动时(第一级)</span>: 扫描 skills/*/SKILL.md → 只解析 frontmatter → 索引追加到 system prompt 尾部<br>
+      <span style="color:#f472b6;">system</span>: "你是 Alex..." + "可用技能: weather(查天气...) / git-cheatsheet(Git 问题...)"  <span style="color:#34d399;">← 索引几百字,常驻</span><br><br>
+      <span class="role-u">user</span>: "Git 怎么撤销上次提交?"<br>
+      <span class="role-a">assistant</span>: tool_calls=[load_skill(name="git-cheatsheet")]  <span style="color:#f472b6;">← 模型看索引,自己决定</span><br>
+      ↓ 执行: 读 skills/git-cheatsheet/SKILL.md 全文<br>
+      <span class="role-t">tool</span>: {"skill": "git-cheatsheet", "content": "# Git 速查..."}  <span style="color:#34d399;">← 全文注入,只在本轮</span><br>
+      <span class="role-a">assistant</span>: "用 git reset --soft HEAD~1,撤销提交但保留修改……"  <span style="color:#a78bfa;">← 按手册回答</span>
+    </div>
+    <p style="margin-top:16px;"><span class="ok">关键</span>:load_skill 就是一个普通工具,完全复用第 05 期的工具循环——工具循环一行代码没改。</p>
+    <p style="margin-top:8px; font-size:16px; color:#6b7a99;">技能全文进的是 tool 消息,随历史回灌;超轮截断后模型需要时会再调一次 load_skill,天然自愈。</p>
+  </section>
+
+  <!-- Slide 7: 核心代码 -->
+  <section class="slide">
+    <div class="slide-tag">CODE</div>
+    <div class="slide-num">07 / 11</div>
+    <h2>核心代码 · 索引 + load_skill</h2>
+    <div class="cols">
+      <div class="col" style="padding:20px;">
+        <h3 style="font-size:18px;">第一级:扫索引</h3>
+        <pre style="margin:8px 0 0;"><code><span class="kw">def</span> <span class="fn">load_skills_index</span>():
+    index = []
+    <span class="kw">for</span> d <span class="kw">in</span> <span class="fn">sorted</span>(SKILLS_DIR.iterdir()):
+        f = d / <span class="str">"SKILL.md"</span>
+        meta = <span class="fn">parse_frontmatter</span>(
+            f.read_text(encoding=<span class="str">"utf-8"</span>))
+        <span class="kw">if</span> <span class="kw">not</span> meta.get(<span class="str">"name"</span>):
+            <span class="kw">continue</span>  <span class="com"># 不算技能</span>
+        index.append({
+            <span class="str">"name"</span>: meta[<span class="str">"name"</span>],
+            <span class="str">"description"</span>: meta.get(<span class="str">"description"</span>, <span class="str">""</span>),
+        })  <span class="com"># ← 只留两个短字段</span>
+    <span class="kw">return</span> index</code></pre>
+      </div>
+      <div class="col" style="padding:20px;">
+        <h3 style="font-size:18px;">第二级:按需取全文</h3>
+        <pre style="margin:8px 0 0;"><code><span class="kw">if</span> name == <span class="str">"load_skill"</span>:
+    skill_md = SKILLS_DIR / arguments[<span class="str">"name"</span>] \
+               / <span class="str">"SKILL.md"</span>
+    <span class="kw">return</span> json.<span class="fn">dumps</span>({
+        <span class="str">"skill"</span>: arguments[<span class="str">"name"</span>],
+        <span class="str">"content"</span>:
+            skill_md.read_text(<span class="str">"utf-8"</span>),
+    }, ensure_ascii=<span class="kw">False</span>)
+    <span class="com"># 全文此刻才进上下文</span>
+    <span class="com"># 没用到的技能 = 0 token</span></code></pre>
+      </div>
+    </div>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">system prompt 组装 = SOUL.md 人设 + build_skills_prompt(index)。命令行新增 <code style="color:#00d4ff;">skills</code>:随时查看索引。</p>
+  </section>
+
+  <!-- Slide 8: Why 对比 -->
+  <section class="slide">
+    <div class="slide-tag">WHY</div>
+    <div class="slide-num">08 / 11</div>
+    <h2>为什么"索引 + 按需"是对的模式?</h2>
+    <table>
+      <thead>
+        <tr><th>方案</th><th>2 个技能</th><th>20 个技能</th><th>200 个技能</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>全量塞 system prompt</td>
+          <td>~1K token</td>
+          <td style="color:#ffb400;">~10K token</td>
+          <td style="color:#ff6b6b;">爆上下文</td>
+        </tr>
+        <tr>
+          <td><strong>Skills 两级加载</strong></td>
+          <td>索引 ~100</td>
+          <td style="color:#10b981;">索引 ~500</td>
+          <td style="color:#10b981;">索引 ~4K,仍可运行</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="cols" style="margin-top:8px;">
+      <div class="col" style="border-color: rgba(255,180,0,0.5); background: rgba(255,180,0,0.06);">
+        <h3 style="color:#ffb400; font-size:18px;">全量方案的问题</h3>
+        <ul style="font-size:16px;">
+          <li>成本随技能数线性增长</li>
+          <li>每轮都付,90% 的对话用不上</li>
+        </ul>
+      </div>
+      <div class="col" style="border-color: rgba(16,185,129,0.5); background: rgba(16,185,129,0.06);">
+        <h3 style="color:#10b981; font-size:18px;">Skills 方案的账</h3>
+        <ul style="font-size:16px;">
+          <li>常驻只付索引的钱</li>
+          <li>全文只在用到的轮次付一次</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:8px; font-size:16px; color:#6b7a99;">这也回答了"为什么 description 要写'什么时候用'"——它是路由器,写歪了模型就会加载错技能。</p>
+  </section>
+
+  <!-- Slide 9: 设计三原则 -->
+  <section class="slide">
+    <div class="slide-tag">DESIGN</div>
+    <div class="slide-num">09 / 11</div>
+    <h2>SKILL.md 设计三原则</h2>
+    <ol>
+      <li><strong>description 写"什么时候用",不是"这是什么"</strong><br><span style="font-size:15px; color:#6b7a99;">"Git 命令速查" ✗ → "当用户问怎么撤销提交、回退版本时使用" ✓ ——模型靠它路由</span></li>
+      <li><strong>正文写给模型看,不是写给人看</strong><br><span style="font-size:15px; color:#6b7a99;">多用表格和步骤,少用散文——模型照着执行,冗余文字只是浪费 token</span></li>
+      <li><strong>写清边界</strong><br><span style="font-size:15px; color:#6b7a99;">"不编造精确到小时的预报"这类约束句,是防止技能被滥用的小保险</span></li>
+    </ol>
+    <div style="margin-top:24px; padding:20px; background:rgba(0, 212, 255, 0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 一种技能一个目录,目录名 = name。加技能 = 加目录,代码零改动——这就是"技能库"的可扩展性。</p>
+    </div>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">这也正是 Trae / Claude Code 等真实 Agent 产品的 Skills 机制原型:frontmatter 索引 + 按需注入,生产环境同款思路。</p>
+  </section>
+
+  <!-- Slide 10: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">10 / 11</div>
+    <h2>试一试 · 6 个动手实验</h2>
+    <ul>
+      <li><strong>看自动演示</strong> — 启动后问"Git 怎么撤销上次提交?"<br><span style="font-size:14px; color:#6b7a99;">观察 load_skill(git-cheatsheet) 被调用、全文注入、回答引用速查表命令</span></li>
+      <li><strong>问天气</strong> — 输入"北京今天天气怎么样?"<br><span style="font-size:14px; color:#6b7a99;">看模型路由到 weather 技能,按模板回答并注明"模拟数据"</span></li>
+      <li><strong>输入 skills</strong> — 打印技能索引<br><span style="font-size:14px; color:#6b7a99;">直观对比"索引几十字"和"全文几千字"的差距</span></li>
+      <li><strong>连续追问</strong> — 再问"那已经 push 了怎么办?"<br><span style="font-size:14px; color:#6b7a99;">观察模型不再调 load_skill——历史里已有全文,省一次加载</span></li>
+      <li><strong>自己写一个技能</strong> — 新建 skills/python-review/SKILL.md<br><span style="font-size:14px; color:#6b7a99;">frontmatter 写清 description,正文放代码评审 checklist,写完输入 skills 确认被识别</span></li>
+      <li><strong>思考题</strong> — 技能结果如果写进 system prompt 会怎样?<br><span style="font-size:14px; color:#6b7a99;">提示:trim_history 永远保留 system,技能全文会永久占上下文——正是两级加载要避免的</span></li>
+    </ul>
+    <div style="margin-top:24px; padding:20px; background:rgba(16, 185, 129, 0.06); border-left:3px solid #10b981; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">学完这一期,基础篇收官:Agent 有循环、记忆、身份、工具、技能库。但 Alex 重启就忘——下次开始装"脑子"。</p>
+    </div>
+  </section>
+
+  <!-- Slide 11: 下期预告 -->
+  <section class="slide cover">
+    <div class="slide-tag">NEXT</div>
+    <div class="slide-num">11 / 11</div>
+    <h1 style="font-size:60px;">第 07 期<br>记忆系统</h1>
+    <div class="subtitle" style="margin-top:32px;">M E M O R Y&nbsp;&nbsp;S Y S T E M</div>
+    <p style="margin-top:40px; font-size:22px; color:#b8c5d6; max-width:680px;">Alex 有会话内的 history,但重启就忘——<br>"上次说好用 Python 3.12"这种跨会话偏好,需要长期记忆。</p>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99; max-width:680px;">下一期引入 memory/ 目录 + 用户画像 + compact 压缩,做记忆可视化面板。进阶篇开始:07-10 装脑子和协作。</p>
+    <p style="margin-top:40px; font-size:14px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:2px;">— END OF EPISODE 06 —</p>
+    <p style="margin-top:24px; font-size:15px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:1px;">源码地址 · <a href="https://github.com/senfel/agent-teaching-course.git" style="color:#00d4ff; text-decoration:none; border-bottom:1px solid rgba(0,212,255,0.5);">github.com/senfel/agent-teaching-course</a></p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 11</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
