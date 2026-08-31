@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 07 期 · 记忆系统</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 76px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 18px; }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 16px; line-height: 1.65; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+  .ok { background: rgba(16, 185, 129, 0.16); padding: 2px 8px; border-radius: 4px; color: #10b981; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.85; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .big-num { font-size: 88px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 20px; color: #b8c5d6; margin-top: 8px; }
+
+  .msg-list { background: rgba(16, 185, 129, 0.06); border: 1px dashed rgba(16, 185, 129, 0.4); border-radius: 10px; padding: 16px 20px; margin: 8px 0; font-family: "SF Mono", Menlo, monospace; font-size: 14px; line-height: 1.7; color: #a8b5cc; }
+  .msg-list .role-s { color: #f472b6; }
+  .msg-list .role-u { color: #60a5fa; }
+  .msg-list .role-a { color: #a78bfa; }
+  .msg-list .role-t { color: #34d399; }
+
+  .dashboard { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 10px; padding: 18px 22px; font-family: "SF Mono", Menlo, monospace; font-size: 14px; line-height: 1.7; color: #a8b5cc; }
+  .dashboard .section-title { color: #00d4ff; font-weight: 700; }
+  .dashboard .section-content { color: #94a3b8; }
+  .dashboard .divider { color: #334155; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 07</div>
+    <div class="slide-num">01 / 11</div>
+    <h1>记忆系统<br>跨会话不忘</h1>
+    <div class="subtitle">M E M O R Y&nbsp;&nbsp;S Y S T E M</div>
+    <div class="meta">15 期系列 · 第 7 期 · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:680px;">Alex 现在有会话内的 history,但重启就忘——<br>"我习惯用 Python 3.12"这种跨会话偏好,需要长期记忆。</p>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">基础篇(02-06)装手脚完成,进阶篇(07-10)开始装脑子——这一期装"记忆"。</p>
+  </section>
+
+  <!-- Slide 2: 问题 -->
+  <section class="slide">
+    <div class="slide-tag">PROBLEM</div>
+    <div class="slide-num">02 / 11</div>
+    <h2>Alex 重启就忘 —— 会话内记忆的局限</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>第 03 期起有的:会话内 history</h3>
+        <div class="msg-list" style="font-size:15px;">
+          messages = [<br>
+          &nbsp;&nbsp;{system: ...},<br>
+          &nbsp;&nbsp;{user: "我习惯用 Python 3.12"},<br>
+          &nbsp;&nbsp;{assistant: "好的..."},<br>
+          &nbsp;&nbsp;...更多对话...<br>
+          ]<br><br>
+          <span style="color:#10b981;">✓ 上一句说什么</span><br>
+          <span style="color:#10b981;">✓ 10 轮上下文</span>
+        </div>
+        <p style="font-size:15px; color:#6b7a99; margin-top:10px;">但 messages 只活在内存里,程序退出就清空</p>
+      </div>
+      <div class="col" style="border-color: rgba(255,180,0,0.5); background: rgba(255,180,0,0.06);">
+        <h3 style="color:#ffb400;">会话内记忆解决不了</h3>
+        <ul style="font-size:16px;">
+          <li>重启后 Alex 不记得我是张三</li>
+          <li>重启后 Alex 不记得"用 Python 3.12"</li>
+          <li>同时跑两个项目,Alex 不知道用户是谁</li>
+          <li>历史被 trim 之后,前面聊的偏好没了</li>
+        </ul>
+        <p style="margin-top:12px; font-size:15px; color:#ffb400;">本质:<span class="warn">短期记忆不能替代长期记忆</span></p>
+      </div>
+    </div>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">人脑也一样:你不会因为昨晚睡了,今天就忘了自己叫什么。Agent 需要不同时间尺度的记忆。</p>
+  </section>
+
+  <!-- Slide 3: 三层记忆 -->
+  <section class="slide">
+    <div class="slide-tag">CONCEPT</div>
+    <div class="slide-num">03 / 11</div>
+    <h2>三层记忆架构</h2>
+    <table>
+      <thead>
+        <tr><th>层级</th><th>介质</th><th>写入时机</th><th>生命周期</th><th>引入期</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>短期</strong></td>
+          <td>messages[] history</td>
+          <td>每轮实时</td>
+          <td>会话内(超轮截断)</td>
+          <td style="color:#6b7a99;">第 03 期已有</td>
+        </tr>
+        <tr>
+          <td><strong>长期 / 用户画像</strong></td>
+          <td>templates/USER.md</td>
+          <td>偏好变更时(Agent 调工具)</td>
+          <td style="color:#10b981;">永久,跨会话常驻</td>
+          <td style="color:#10b981;"><strong>第 07 期新增</strong></td>
+        </tr>
+        <tr>
+          <td><strong>原始历史</strong></td>
+          <td>memory/raw_history.jsonl</td>
+          <td>每轮对话落盘</td>
+          <td style="color:#10b981;">append-only,可审计</td>
+          <td style="color:#10b981;"><strong>第 07 期新增</strong></td>
+        </tr>
+        <tr>
+          <td><strong>压缩</strong></td>
+          <td>LLM 摘要</td>
+          <td>超轮时自动 compact</td>
+          <td>会话内,替换早期消息</td>
+          <td style="color:#10b981;"><strong>第 07 期新增</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:18px; padding:16px 20px; background:rgba(0, 212, 255, 0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 对应人脑:<span class="hi">短期=工作记忆(WM)</span> · <span class="hi">长期=陈述性记忆(LTM)</span> · <span class="hi">原始历史=事件日志</span></p>
+    </div>
+    <p style="margin-top:12px; font-size:16px; color:#6b7a99;">三层各司其职,组合起来就是 Agent 的"完整记忆系统"。</p>
+  </section>
+
+  <!-- Slide 4: 课程地图 -->
+  <section class="slide">
+    <div class="slide-tag">ROADMAP</div>
+    <div class="slide-num">04 / 11</div>
+    <h2>本期位置 · 进阶篇开始</h2>
+    <table>
+      <thead>
+        <tr><th>期号</th><th>主题</th><th>Agent 能力</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>01</td><td>认识 Agent + 开工准备</td><td style="color:#6b7a99;">第一次调用</td></tr>
+        <tr><td>02</td><td>单次调用 → 连续对话</td><td style="color:#ffb400;">循环(无记忆)</td></tr>
+        <tr><td>03</td><td>短期记忆 history</td><td style="color:#00d4ff;">记忆(无身份)</td></tr>
+        <tr><td>04</td><td>System Prompt 人设</td><td style="color:#a78bfa;">记忆 + 身份</td></tr>
+        <tr><td>05</td><td>Tool Use 工具调用</td><td style="color:#34d399;">+ 工具(会动手)</td></tr>
+        <tr><td>06</td><td>Skills 按需加载</td><td style="color:#10b981;">+ 技能库(能力可扩展)</td></tr>
+        <tr><td><strong>07</strong></td><td><strong>记忆系统</strong></td><td style="color:#f472b6;">← 本期:+ 长期记忆(跨会话)</td></tr>
+        <tr><td>08</td><td>任务规划 TodoList</td><td style="color:#6b7a99;">+ 规划(进阶篇继续)</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">基础篇(02-06)装手脚收官,进阶篇(07-10)装脑子——07 记忆 / 08 规划 / 09 子代理 / 10 团队。</p>
+  </section>
+
+  <!-- Slide 5: USER.md -->
+  <section class="slide">
+    <div class="slide-tag">STRUCTURE</div>
+    <div class="slide-num">05 / 11</div>
+    <h2>用户画像 · templates/USER.md</h2>
+    <pre><code><span class="var"># 用户画像(User Profile)</span>
+
+<span class="var">## 基础信息</span>
+- 角色:张三,创业公司 CTO
+- 技术栈:Python(主力)、TypeScript、Go(学习中)
+
+<span class="var">## 稳定偏好</span>
+- 代码风格:类型注解完整、函数不超过 50 行
+- Python 版本:<span class="hi">3.12</span>(全项目统一)
+- 包管理:pip + venv,不用 poetry / uv
+- 回答风格:简洁、直接,代码 &gt; 长段文字
+
+<span class="var">## 已知反偏好</span>
+- 不要 emoji 装饰代码注释
+- 不要在回答末尾追加"还有什么需要帮忙的吗"</code></pre>
+    <div class="cols" style="margin-top:8px;">
+      <div class="col">
+        <h3 style="font-size:18px;">加载时机</h3>
+        <p style="font-size:15px;">启动时 <code style="color:#00d4ff;">load_user_profile()</code> 读全文 → 追加到 system prompt 尾部</p>
+      </div>
+      <div class="col">
+        <h3 style="font-size:18px;">写入方式</h3>
+        <p style="font-size:15px;">Agent 调 <code style="color:#00d4ff;">save_user_profile</code> 工具 → 按 section 替换章节内容</p>
+      </div>
+    </div>
+    <p style="margin-top:12px; font-size:16px; color:#6b7a99;">Agent 自己会改自己的画像:你说"我开始用 uv 了",它自动写进去。</p>
+  </section>
+
+  <!-- Slide 6: 三层流程 -->
+  <section class="slide">
+    <div class="slide-tag">CORE</div>
+    <div class="slide-num">06 / 11</div>
+    <h2>三层记忆 · 一次完整生命周期</h2>
+    <div class="msg-list">
+      <span class="role-s">启动(第 1 步)</span>: load_user_profile() → 读 USER.md → 追加到 system prompt<br>
+      <span class="role-s">system</span>: "你是 Alex..." + "技能索引: weather..." + "# 用户画像..."  <span style="color:#34d399;">← 三层拼好,常驻</span><br><br>
+
+      <span class="role-u">user</span>: "我开始用 uv 了"<br>
+      <span class="role-a">assistant</span>: tool_calls=[save_user_profile("稳定偏好", ...)]  <span style="color:#f472b6;">← Agent 自己改画像</span><br>
+      ↓ 执行: 重写 USER.md 的"稳定偏好"章节<br>
+      <span class="role-t">tool</span>: {"saved": "稳定偏好"}  <span style="color:#34d399;">← 长期记忆已写入磁盘</span><br>
+      <span class="role-a">assistant</span>: "好的,已记下,你以后的项目都用 uv。"<br><br>
+
+      <span style="color:#94a3b8;">↑ 上面所有事件都是"产生即落盘"——append_and_persist 同步写 raw_history.jsonl<br>
+         Ctrl-C 崩了也至少有上一轮的快照</span><br><br>
+
+      <span class="role-s">下次启动</span>: 重新读 USER.md → 你看到"uv"已在画像里  <span style="color:#34d399;">← 跨会话生效</span>
+    </div>
+    <p style="margin-top:12px; font-size:16px; color:#6b7a99;">关键:短期回灌上下文,长期写文件持久化,原始历史 append 落盘——三者完全独立。</p>
+  </section>
+
+  <!-- Slide 7: 核心代码 -->
+  <section class="slide" style="justify-content:flex-start;">
+    <div class="slide-tag">CODE</div>
+    <div class="slide-num">07 / 11</div>
+    <h2 style="margin-bottom:14px;">核心代码 · 四个记忆函数</h2>
+
+    <!-- 第一行:加载画像 / save_user_profile -->
+    <div class="cols" style="margin-top:0;">
+      <div class="col" style="padding:14px;">
+        <h3 style="font-size:17px; margin-bottom:8px;">① 加载用户画像</h3>
+        <pre style="margin:0; font-size:12px; line-height:1.5;"><code><span class="kw">def</span> <span class="fn">load_user_profile</span>():
+    <span class="kw">if not</span> USER_PATH.exists():
+        <span class="kw">return</span> <span class="str">""</span>
+    <span class="kw">return</span> USER_PATH.<span class="fn">read_text</span>(
+        encoding=<span class="str">"utf-8"</span>)
+
+<span class="com"># 启动时拼:</span>
+system_prompt = (
+    soul + skills + profile
+)</code></pre>
+      </div>
+
+      <div class="col" style="padding:14px;">
+        <h3 style="font-size:17px; margin-bottom:8px;">② save_user_profile 工具</h3>
+        <pre style="margin:0; font-size:12px; line-height:1.5;"><code><span class="kw">if</span> name == <span class="str">"save_user_profile"</span>:
+    <span class="com"># 找 ## section</span>
+    <span class="com"># 替换到下一个 ##</span>
+    USER_PATH.<span class="fn">write_text</span>(
+        new_text, encoding=<span class="str">"utf-8"</span>)
+    <span class="kw">return</span> {<span class="str">"saved"</span>: section}
+
+<span class="com"># 替换而非 append</span></code></pre>
+      </div>
+    </div>
+
+    <!-- 第二行:JSONL 落盘 / compact 压缩 -->
+    <div class="cols" style="margin-top:8px;">
+      <div class="col" style="padding:14px;">
+        <h3 style="font-size:17px; margin-bottom:8px;">③ append_raw_history</h3>
+        <pre style="margin:0; font-size:12px; line-height:1.5;"><code><span class="kw">def</span> <span class="fn">append_raw_history</span>(
+        sid, role, content):
+    record = {
+        <span class="str">"ts"</span>: now.isoformat(),
+        <span class="str">"session"</span>: sid,
+        <span class="str">"role"</span>: role,
+        <span class="str">"content"</span>: content[:<span class="var">500</span>],
+    }
+    f.<span class="fn">write</span>(json.dumps(record))</code></pre>
+      </div>
+
+      <div class="col" style="padding:14px;">
+        <h3 style="font-size:17px; margin-bottom:8px;">④ compact_history</h3>
+        <pre style="margin:0; font-size:12px; line-height:1.5;"><code><span class="com"># 触发: rounds &gt; 8</span>
+<span class="com"># 保留: system + 最近 10 轮</span>
+
+<span class="kw">def</span> <span class="fn">compact_history</span>(msgs):
+    boundary = user_pos[-<span class="var">10</span>]
+    summary = client.chat.<span class="fn">create</span>(
+        model=MODEL, msgs).content
+    <span class="kw">return</span> [system, summary] + keep</code></pre>
+      </div>
+    </div>
+
+    <p style="margin-top:8px; font-size:13px; color:#6b7a99; line-height:1.5;">
+      工具循环一行没改——save_user_profile / recall_memory 是普通工具,复用第 05 期 chat_with_tools。<br>
+      事件溯源纪律:append_and_persist 唯一入口,所有 user/assistant/tool 消息同步落盘 raw_history.jsonl。
+    </p>
+  </section>
+
+  <!-- Slide 8: 记忆可视化面板 -->
+  <section class="slide">
+    <div class="slide-tag">DASHBOARD</div>
+    <div class="slide-num">08 / 11</div>
+    <h2>记忆可视化面板(教学亮点)</h2>
+    <div class="dashboard">
+<pre style="margin:0; padding:0; background:transparent; border:none;">
+┌──────────────────────────────────────────────────────────┐
+│  🧠 Alex 记忆面板(第 07 期新增)                          │
+├──────────────────────────────────────────────────────────┤
+│  <span class="section-title">[长期记忆]</span> <span class="section-content">USER.md 加载成功(823 字符)</span>                   │
+│    <span class="section-content">• 基础信息</span>                                              │
+│    <span class="section-content">• 稳定偏好</span>                                              │
+│    <span class="section-content">• 工作背景</span>                                              │
+│    <span class="section-content">• 已知反偏好</span>                                            │
+│──────────────────────────────────────────────────────────│
+│  <span class="section-title">[原始历史]</span> <span class="section-content">raw_history.jsonl: 47 条记录(累计)</span>            │
+│  <span class="section-title">[上次会话]</span> <span class="section-content">2026-08-28 14:30  轮数=12  token=8432         </span>│
+└──────────────────────────────────────────────────────────┘</pre>
+    </div>
+    <div style="margin-top:24px; padding:18px 22px; background:rgba(16, 185, 129, 0.06); border-left:3px solid #10b981; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 学员看一眼就懂:长期记忆常驻 / 原始历史累计 / 上次会话元数据全在</p>
+    </div>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">这种"启动即看见自己状态"的模式,在生产 Agent 里也常见——比如 Claude Code 启动会打印 "Working in /Users/x/...",本质是一样的"状态可见性"。</p>
+  </section>
+
+  <!-- Slide 9: Why 对比 -->
+  <section class="slide">
+    <div class="slide-tag">WHY</div>
+    <div class="slide-num">09 / 11</div>
+    <h2>为什么需要三层而不是一层?</h2>
+    <table>
+      <thead>
+        <tr><th>方案</th><th>优点</th><th>缺点</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>只用 messages(短期)</td>
+          <td>简单</td>
+          <td style="color:#ffb400;">重启即忘,无用户身份</td>
+        </tr>
+        <tr>
+          <td>只用 JSONL(全量)</td>
+          <td>永久</td>
+          <td style="color:#ffb400;">每轮全量回灌,token 爆炸</td>
+        </tr>
+        <tr>
+          <td>只用 USER.md(长期)</td>
+          <td>跨会话</td>
+          <td style="color:#ffb400;">丢失对话细节,无法审计</td>
+        </tr>
+        <tr>
+          <td><strong>三层组合(本期)</strong></td>
+          <td style="color:#10b981;">各取所长</td>
+          <td style="color:#10b981;">实现稍复杂</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="cols" style="margin-top:14px;">
+      <div class="col" style="border-color: rgba(255,180,0,0.5); background: rgba(255,180,0,0.06);">
+        <h3 style="color:#ffb400; font-size:18px;">trim vs compact</h3>
+        <ul style="font-size:16px;">
+          <li><strong>trim</strong>(第 03 期):超 <code style="color:#ffb400;">MAX_ROUNDS=10</code> → 直接<strong>丢弃</strong>早期</li>
+          <li><strong>compact</strong>(第 07 期):超 <code style="color:#ffb400;">COMPACT_THRESHOLD=8</code> → 用 LLM <strong>压缩</strong>成摘要,保留最近 10 轮</li>
+          <li style="font-size:14px; color:#94a3b8;">trim 是有损丢弃,compact 是有损压缩——后者慢一点但保留关键信息</li>
+        </ul>
+      </div>
+      <div class="col" style="border-color: rgba(16,185,129,0.5); background: rgba(16,185,129,0.06);">
+        <h3 style="color:#10b981; font-size:18px;">save vs append</h3>
+        <ul style="font-size:16px;">
+          <li><strong>save</strong>(本期):按 section <strong>替换</strong>整个章节</li>
+          <li>如果 append:"代码风格"会出现两个矛盾描述</li>
+          <li style="font-size:14px; color:#94a3b8;">同主题只能有一个权威版本——这是结构化文档的常识</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">三种记忆的写入策略不同:短期是"覆盖",原始历史是"append",长期画像是"替换章节"。</p>
+  </section>
+
+  <!-- Slide 10: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">10 / 11</div>
+    <h2>试一试 · 7 个动手实验</h2>
+    <ul>
+      <li><strong>看记忆面板</strong> — 启动程序,看 "🧠 Alex 记忆面板"<br><span style="font-size:14px; color:#6b7a99;">USER.md 章节、上次会话元数据、原始历史条数</span></li>
+      <li><strong>第一次演示</strong> — Alex 调 recall_memory 查"我之前说过什么"<br><span style="font-size:14px; color:#6b7a99;">观察它读 USER.md 引用"张三 CTO Python 3.12"等偏好</span></li>
+      <li><strong>第二次演示</strong> — Alex 调 save_user_profile 记录"我开始用 uv 了"<br><span style="font-size:14px; color:#6b7a99;">程序会验证 USER.md 是否真的写入了 uv</span></li>
+      <li><strong>跨会话验证</strong> — <span class="warn">退出(quit)再启动</span>,问"我之前说过用什么包管理?"<br><span style="font-size:14px; color:#6b7a99;">Alex 会说"uv"——这就是长期记忆生效</span></li>
+      <li><strong>触发 compact</strong> — 连续问 9-10 个问题<br><span style="font-size:14px; color:#6b7a99;">观察 [compact] 触发,看 messages 里多一条 [compact summary]</span></li>
+      <li><strong>查原始历史</strong> — 输入 memory 命令<br><span style="font-size:14px; color:#6b7a99;">看最近几条 JSONL 落盘内容</span></li>
+      <li><strong>思考题</strong> — save_user_profile 如果改成 append 会怎样?<br><span style="font-size:14px; color:#6b7a99;">提示:用户偏好可能自相矛盾,模型下次启动会困惑"我到底用 pip 还是 uv"</span></li>
+    </ul>
+    <div style="margin-top:20px; padding:18px 22px; background:rgba(0,212,255,0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 学完这一期,进阶篇 4 期开始:Alex 有循环、记忆、身份、工具、技能库、长期记忆——基础齐全,开始装脑子(规划、子代理、团队)。</p>
+    </div>
+  </section>
+
+  <!-- Slide 11: 下期预告 -->
+  <section class="slide cover">
+    <div class="slide-tag">NEXT</div>
+    <div class="slide-num">11 / 11</div>
+    <h1 style="font-size:60px;">第 08 期<br>任务规划<br>TodoList</h1>
+    <div class="subtitle" style="margin-top:32px;">T A S K&nbsp;&nbsp;P L A N N I N G</div>
+    <p style="margin-top:40px; font-size:22px; color:#b8c5d6; max-width:680px;">Alex 现在能记住过去,但面对复杂任务"帮我准备周会"<br>还是会一口气写完——缺乏规划能力。</p>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99; max-width:680px;">下一期引入 todolist,让 Agent 能拆任务、标 in_progress、勾完成,真正做到"做事有条理"。</p>
+    <p style="margin-top:40px; font-size:14px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:2px;">— END OF EPISODE 07 —</p>
+    <p style="margin-top:24px; font-size:15px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:1px;">源码地址 · <a href="https://github.com/senfel/agent-teaching-course.git" style="color:#00d4ff; text-decoration:none; border-bottom:1px solid rgba(0,212,255,0.5);">github.com/senfel/agent-teaching-course</a></p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 11</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
