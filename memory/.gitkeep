@@ -1,19 +1,20 @@
 # memory/ 目录
 
 > 第 07 期引入,用于存储 Agent 的跨会话长期记忆。
-> 运行 `python code/step07_memory.py` 后会生成:
+> 运行 `python code/step08_todo.py` 后会生成:
 >
 > - `memory/raw_history.jsonl` — 每次对话的原始历史(append-only)
 > - `memory/sessions.json` — 会话索引(启动时间、轮数、token 消耗)
-> - `memory/user_profile.md` — 用户画像副本(从 templates/USER.md 同步)
 
 ## 为什么用 JSONL
 
 - 每行一条 JSON 记录,append-only,不会因为单次写入失败导致整文件损坏
 - 教学场景够用,生产环境通常换 SQLite / 向量数据库
 
-## 文件命名
+## 目录结构
 
-- `raw_history.jsonl` — 原始历史
-- `sessions.json` — 会话元数据
-- `user_profile.md` — 用户画像副本
+```
+memory/
+├── raw_history.jsonl      原始历史(append-only)
+└── sessions.json          会话索引(启动时间、轮数、token)
+```

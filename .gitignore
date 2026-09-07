@@ -22,6 +22,7 @@ env/
 
 # Agent 运行时生成
 memory/*.jsonl
+memory/*.json
 memory/*.md
 !memory/.gitkeep
 .hooks_audit.jsonl
