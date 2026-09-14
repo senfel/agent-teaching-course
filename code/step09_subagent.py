@@ -95,7 +95,7 @@ def load_user_profile() -> str:
 
 
 # ============ 4. 技能层(与第 06 期完全一致)============
-SKILLS_DIR = Path(__file__).parent.parent / "skills"
+SKILLS_DIR = Path(__file__).parent.parent.parent / "skills"
 
 
 def parse_frontmatter(text: str) -> dict:
