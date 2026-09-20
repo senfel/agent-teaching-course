@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 10 期 · Agent Team 团队协作</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 76px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 18px; }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 16px; line-height: 1.65; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.85; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .center-row { display: flex; align-items: center; justify-content: center; gap: 60px; flex-wrap: wrap; }
+  .diagram { max-width: 520px; width: 100%; }
+  .big-num { font-size: 96px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 22px; color: #b8c5d6; margin-top: 8px; }
+
+  .flow-box { background: rgba(0, 212, 255, 0.06); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 10px; padding: 20px; margin: 12px 0; }
+  .arrow { text-align: center; font-size: 28px; color: #00d4ff; margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 10</div>
+    <div class="slide-num">01 / 10</div>
+    <h1>Agent Team<br>团队协作</h1>
+    <div class="subtitle">P E R S I S T E N T&nbsp;&nbsp;T E A M M A T E S</div>
+    <div class="meta">15 期系列 · 第 10 期 · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:640px;">上一期 Alex 有了"临时分身"——子代理用完即弃。<br>这一期给它"持久团队"——队友有记忆、有 inbox、能互相传话,真正模拟"前端组+后端组"协作开发。</p>
+  </section>
+
+  <!-- Slide 2: 问题 -->
+  <section class="slide">
+    <div class="slide-tag">PROBLEM</div>
+    <div class="slide-num">02 / 10</div>
+    <h2>子代理是"临时工" —— 用完即弃</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>⚠ 子代理做不到</h3>
+        <p style="font-size:18px;"><span class="warn">无持久状态</span> — 每次 dispatch 全新 messages,上次做了什么全忘了</p>
+        <p style="font-size:18px;"><span class="warn">单向通信</span> — 只能把结果返回给主 Agent,不能给其他子代理发消息</p>
+        <p style="font-size:18px;"><span class="warn">无消息队列</span> — 没有 inbox,队友之间无法异步传话</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>💡 需要什么?</h3>
+        <p style="font-size:18px;"><span class="hi">持久队友</span> — messages 跨唤醒保持</p>
+        <p style="font-size:18px;"><span class="hi">inbox 消息</span> — 队友之间异步传话</p>
+        <p style="font-size:18px;"><span class="hi">消息广播</span> — 一条通知所有人收到</p>
+      </div>
+    </div>
+    <p style="text-align:center; margin-top:24px; font-size:22px; color:#00d4ff;">让前端给后端发消息"我需要接口格式"<br>后端下次被唤醒时自动看到 —— 这就是 Agent Team</p>
+    <p style="text-align:center; margin-top:16px; font-size:16px; color:#6b7a99;">子代理是"临时工"(派遣→运行→结果→销毁),团队成员是"持久队友"(注册→可多次唤醒→上下文累积)。</p>
+  </section>
+
+  <!-- Slide 3: 三个核心概念 -->
+  <section class="slide">
+    <div class="slide-tag">CONCEPT</div>
+    <div class="slide-num">03 / 10</div>
+    <h2>三个核心概念</h2>
+    <div style="display:flex; align-items:center; justify-content:center; gap:24px; flex-wrap:wrap; margin:30px 0;">
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:64px;">PERSIST</div>
+        <div class="big-label">持久队友</div>
+      </div>
+      <div style="font-size:36px; color:#00d4ff;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:64px;">INBOX</div>
+        <div class="big-label">消息系统</div>
+      </div>
+      <div style="font-size:36px; color:#00d4ff;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:64px;">CAST</div>
+        <div class="big-label">消息广播</div>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:22px; color:#e8ecf5; margin-top:20px;">= <span style="color:#00d4ff; font-weight:700;">AGENT TEAM</span></p>
+    <table style="margin-top:24px;">
+      <thead>
+        <tr><th>概念</th><th>含义</th><th>解决什么问题</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>持久队友</strong></td><td>messages 跨唤醒保持</td><td>前端第二次被唤醒时,还记得第一次做了什么</td></tr>
+        <tr><td><strong>inbox 消息</strong></td><td>消息队列,异步通信</td><td>前端给后端的 inbox 发消息,后端下次被唤醒时看到</td></tr>
+        <tr><td><strong>消息广播</strong></td><td>一次发所有人</td><td>"需求变更了"一条消息所有人收到</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Slide 4: Subagent vs Team Member -->
+  <section class="slide">
+    <div class="slide-tag">COMPARE</div>
+    <div class="slide-num">04 / 10</div>
+    <h2>Subagent vs Team Member</h2>
+    <table>
+      <thead>
+        <tr><th>维度</th><th>Subagent(第 09 期)</th><th>Team Member(本期)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>生命周期</strong></td><td>临时:派遣→运行→销毁</td><td><span class="hi">持久</span>:注册一次,可多次唤醒</td></tr>
+        <tr><td><strong>messages</strong></td><td>函数局部变量,每次全新</td><td><span class="hi">注册表全局</span>,跨唤醒累积</td></tr>
+        <tr><td><strong>第二次唤醒</strong></td><td><span class="warn">全新上下文</span>,不记得上次</td><td><span class="hi">看到第一次的对话</span>,上下文累积</td></tr>
+        <tr><td><strong>通信</strong></td><td>单向(主→子→结果回传)</td><td><span class="hi">双向</span>(inbox 异步消息)</td></tr>
+        <tr><td><strong>消息队列</strong></td><td>无</td><td><span class="hi">inbox</span>(读后清空)</td></tr>
+        <tr><td><strong>工具白名单</strong></td><td>3 个(基础工具)</td><td>5 个(基础 + <span class="hi">通信工具</span>)</td></tr>
+        <tr><td><strong>适用场景</strong></td><td>独立任务(审查代码)</td><td>多轮协作(前端+后端开发)</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">关键:Subagent 的 sub_messages 是函数局部变量(函数结束即销毁),Team Member 的 messages 存在 TEAM_MEMBERS 注册表里(全局持久)。这是持久队友和临时子代理的本质区别。</p>
+  </section>
+
+  <!-- Slide 5: inbox 消息系统 -->
+  <section class="slide">
+    <div class="slide-tag">INBOX</div>
+    <div class="slide-num">05 / 10</div>
+    <h2>inbox 异步通信 —— 队友怎么传话</h2>
+    <div class="flow-box">
+      <p style="margin:0; font-size:18px; color:#00d4ff;">t=0 &nbsp; 前端被唤醒,需要后端接口</p>
+      <p style="margin:4px 0 0; font-size:17px;">&nbsp;&nbsp;&nbsp;→ 调 <code style="color:#00d4ff;">send_message(to_member="backend_dev", content="我需要登录接口格式")</code></p>
+      <p style="margin:4px 0 0; font-size:17px;">&nbsp;&nbsp;&nbsp;→ backend_dev 的 inbox += 1 条消息</p>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="flow-box">
+      <p style="margin:0; font-size:18px; color:#00d4ff;">t=5 &nbsp; 后端被唤醒</p>
+      <p style="margin:4px 0 0; font-size:17px;">&nbsp;&nbsp;&nbsp;→ inbox 消息自动注入到 task:"--- 收到的队友消息 --- [frontend_dev] 我需要登录接口格式"</p>
+      <p style="margin:4px 0 0; font-size:17px;">&nbsp;&nbsp;&nbsp;→ inbox <span class="warn">清空</span>(已消费)&nbsp;&nbsp;&nbsp;→ 后端设计接口,回复前端</p>
+      <p style="margin:4px 0 0; font-size:17px;">&nbsp;&nbsp;&nbsp;→ frontend_dev 的 inbox += 1 条消息</p>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="flow-box">
+      <p style="margin:0; font-size:18px; color:#00d4ff;">t=10 &nbsp; 前端再次被唤醒</p>
+      <p style="margin:4px 0 0; font-size:17px;">&nbsp;&nbsp;&nbsp;→ inbox 消息注入:"[backend_dev] 接口定义: POST /api/login..."</p>
+      <p style="margin:4px 0 0; font-size:17px;">&nbsp;&nbsp;&nbsp;→ 前端看到后端回复,继续对接 API</p>
+    </div>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">inbox 设计要点:读后清空(唤醒时注入后立即 clear,不会重复消费);read_inbox 可查看但不消费。</p>
+  </section>
+
+  <!-- Slide 6: 五个新工具 -->
+  <section class="slide">
+    <div class="slide-tag">TOOLS</div>
+    <div class="slide-num">06 / 10</div>
+    <h2>五个新工具(16 个 = 11 + 5)</h2>
+    <pre><code><span class="com"># ① 唤醒持久队友(上下文跨唤醒保持,inbox 自动注入)</span>
+<span class="fn">team_wake</span>(member_id=<span class="str">"frontend_dev"</span>, task=<span class="str">"设计登录页面的 HTML 结构"</span>)
+
+<span class="com"># ② 给指定队友的 inbox 发消息(主 Agent 或队友都能调)</span>
+<span class="fn">send_message</span>(to_member=<span class="str">"backend_dev"</span>, content=<span class="str">"我需要登录接口格式"</span>)
+
+<span class="com"># ③ 向所有队友的 inbox 广播一条消息</span>
+<span class="fn">broadcast_message</span>(content=<span class="str">"需求变更:增加验证码校验"</span>)
+
+<span class="com"># ④ 读取某个队友的 inbox(不消费,仅查看)</span>
+<span class="fn">read_inbox</span>(member_id=<span class="str">"frontend_dev"</span>)
+
+<span class="com"># ⑤ 查看团队成员列表及状态</span>
+<span class="fn">list_team</span>()</code></pre>
+    <p style="margin-top:14px;">五个工具和第 05-09 期的工具<span class="hi">完全平等</span>——加能力 = 加工具,核心循环一行没改。</p>
+    <p style="margin-top:8px; font-size:16px; color:#6b7a99;">累积式:step10 = step09 + Agent Team。子代理代码全部保留,只新增 Team 层 + 5 个工具。</p>
+  </section>
+
+  <!-- Slide 7: 三层架构 -->
+  <section class="slide">
+    <div class="slide-tag">ARCHITECTURE</div>
+    <div class="slide-num">07 / 10</div>
+    <h2>Team Member 三层架构</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>① 持久上下文层(累积)</h3>
+        <p style="font-size:17px;">config["messages"] 跨唤醒保持</p>
+        <p style="font-size:17px;">第一次: [system, user(task1)]</p>
+        <p style="font-size:17px;">第二次: [system, user(task1), asst, user(task2)]</p>
+        <p style="font-size:16px; color:#6b7a99;">队友"记得"之前做了什么</p>
+      </div>
+      <div class="col">
+        <h3>② inbox 注入层(通信)</h3>
+        <p style="font-size:17px;">if config["inbox"]:</p>
+        <p style="font-size:17px;">&nbsp;&nbsp;task = task + inbox 消息拼装</p>
+        <p style="font-size:17px;">&nbsp;&nbsp;config["inbox"].clear()</p>
+        <p style="font-size:16px; color:#6b7a99;">唤醒时自动读取未读消息,读后清空</p>
+      </div>
+    </div>
+    <div class="col" style="margin-top:0;">
+      <h3>③ 队友工具循环(第 05 期复用,加通信工具)</h3>
+      <p style="font-size:17px;">while True: LLM → 看持久 messages + 受限工具 → 决定调什么</p>
+      <p style="font-size:17px;">队友可调 <code style="color:#00d4ff;">send_message</code> 给其他队友发消息</p>
+      <p style="font-size:16px; color:#6b7a99;">和主循环结构完全一样,但 messages 持久 + tools 含通信</p>
+    </div>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">Team Member 的 messages 存在 TEAM_MEMBERS 注册表(全局持久),Subagent 的 sub_messages 是函数局部变量(函数结束即销毁)。</p>
+  </section>
+
+  <!-- Slide 8: 演示场景 -->
+  <section class="slide">
+    <div class="slide-tag">DEMO</div>
+    <div class="slide-num">08 / 10</div>
+    <h2>演示:前端+后端协作开发"用户登录功能"</h2>
+    <pre><code><span class="com"># 用户: "让前端和后端协作开发登录功能"</span>
+
+<span class="com"># 1. 主 Agent 唤醒后端,设计登录接口</span>
+[工具调用] <span class="fn">team_wake</span>({'member_id': <span class="str">'backend_dev'</span>, 'task': <span class="str">'设计登录接口'</span>})
+  [team·backend_dev] <span class="com"># 设计 POST /api/login 接口</span>
+  [team·backend_dev] <span class="fn">send_message</span>({'to_member': <span class="str">'frontend_dev'</span>, ...})
+
+<span class="com"># 2. 唤醒前端,设计登录页面</span>
+[工具调用] <span class="fn">team_wake</span>({'member_id': <span class="str">'frontend_dev'</span>, 'task': <span class="str">'设计登录页面'</span>})
+  [team·frontend_dev] <span class="com"># 读取 1 条 inbox 消息 ← 看到后端的接口定义!</span>
+  [team·frontend_dev] <span class="com"># 根据后端接口设计页面</span>
+  [team·frontend_dev] <span class="fn">send_message</span>({'to_member': <span class="str">'backend_dev'</span>, 'content': <span class="str">'验证码字段怎么传?'</span>})
+
+<span class="com"># 3. 再次唤醒后端(持久上下文!记得第一次设计了什么)</span>
+[工具调用] <span class="fn">team_wake</span>({'member_id': <span class="str">'backend_dev'</span>, 'task': <span class="str">'回复前端问题'</span>})
+  [team·backend_dev] <span class="com"># 读取 1 条 inbox 消息 ← 看到前端的问题!</span>
+  [team·backend_dev] <span class="com"># 上下文中有第一次的对话记录 → 知道接口已有验证码字段</span>
+  [team·backend_dev] <span class="fn">send_message</span>({'to_member': <span class="str">'frontend_dev'</span>, 'content': <span class="str">'验证码用 code 字段...'</span>})</code></pre>
+    <p style="margin-top:10px; font-size:16px; color:#6b7a99;">后端第二次被唤醒时,messages 里有第一次的对话记录——这就是持久上下文的意义。</p>
+  </section>
+
+  <!-- Slide 9: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">09 / 10</div>
+    <h2>试一试 · 6 个动手实验</h2>
+    <ul>
+      <li>看团队协作:启动程序,自动演示前端+后端协作开发登录功能</li>
+      <li>看消息广播:自动演示 2 用 <code style="color:#00d4ff;">broadcast_message</code> 通知需求变更</li>
+      <li>验证持久上下文:连续唤醒同一个队友两次,问它"你刚才做了什么"</li>
+      <li>验证 inbox 异步:让前端给后端发消息,用 <code style="color:#00d4ff;">read_inbox</code> 查看后端 inbox</li>
+      <li>对比子代理和团队:先 <code style="color:#00d4ff;">dispatch_subagent</code> 再 <code style="color:#00d4ff;">team_wake</code> —— 看临时 vs 持久</li>
+      <li>思考题:如果去掉 inbox,团队协作会退化成什么?如果允许队友嵌套唤醒会怎样?</li>
+    </ul>
+    <div style="margin-top:32px; padding:20px; background:rgba(0,212,255,0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">输入 <code style="color:#00d4ff;">team</code> 看团队面板,<code style="color:#00d4ff;">wake</code> 看唤醒指南,<code style="color:#00d4ff;">subagents</code> 看子代理面板。</p>
+    </div>
+  </section>
+
+  <!-- Slide 10: 下一期预告 -->
+  <section class="slide cover">
+    <div class="slide-tag">NEXT</div>
+    <div class="slide-num">10 / 10</div>
+    <h1 style="font-size:60px;">第 11 期<br>MCP 协议</h1>
+    <div class="subtitle" style="margin-top:32px;">M O D E L&nbsp;&nbsp;C O N T E X T&nbsp;&nbsp;P R O T O C O L</div>
+    <p style="margin-top:40px; font-size:22px; color:#b8c5d6; max-width:640px;">Alex 有了记忆、规划、子代理、团队——<br>但工具还是写死在代码里的。下一期引入 MCP:<br>让 Agent 动态发现和连接外部工具服务器。</p>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99; max-width:640px;">从"内置工具"到"开放生态",Agent 不再只能用你写的工具,而是能连接整个 MCP 生态。</p>
+    <p style="margin-top:40px; font-size:14px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:2px;">— END OF EPISODE 10 —</p>
+    <p style="margin-top:24px; font-size:15px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:1px;">源码地址 · <a href="https://github.com/senfel/agent-teaching-course.git" style="color:#00d4ff; text-decoration:none; border-bottom:1px solid rgba(0,212,255,0.5);">github.com/senfel/agent-teaching-course</a></p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 10</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
