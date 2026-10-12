@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 12 期 · Hooks 生命周期(拦截、改写与操作审计)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 76px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 18px; }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 16px; line-height: 1.65; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.85; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .center-row { display: flex; align-items: center; justify-content: center; gap: 60px; flex-wrap: wrap; }
+  .diagram { max-width: 520px; width: 100%; }
+  .big-num { font-size: 96px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 22px; color: #b8c5d6; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 12</div>
+    <div class="slide-num">01 / 10</div>
+    <h1>Hooks 生命周期<br>拦截、改写与操作审计</h1>
+    <div class="subtitle">I N T E R C E P T&nbsp;&nbsp;/&nbsp;&nbsp;R E W R I T E&nbsp;&nbsp;/&nbsp;&nbsp;A U D I T</div>
+    <div class="meta">15 期系列 · 第 12 期 · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:640px;">前 11 期 Alex 的能力越来越强,但每次工具调用都"照单全收"。<br>这一期给工具循环装一道"安检":敏感词拦截、参数打码、操作审计,全部 Hook 进来。</p>
+  </section>
+
+  <!-- Slide 2: 概念对比 -->
+  <section class="slide">
+    <div class="slide-tag">CONCEPT</div>
+    <div class="slide-num">02 / 10</div>
+    <h2>没有 Hooks vs 有 Hooks —— 工具调用从"裸奔"到"安检"</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>🚪 没有 Hooks(第 11 期)</h3>
+        <p style="font-size:18px;">LLM 发起 tool_call → 直接 execute_tool<br>中间没有任何检查站</p>
+        <p style="font-size:18px;"><span class="warn">让存密钥就存密钥,让外发就外发</span></p>
+        <p style="font-size:18px;color:#6b7a99;">事后想查"它到底干了什么"?没有日志,只剩聊天记录</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>🛡️ 有 Hooks(本期)</h3>
+        <p style="font-size:18px;">Before 钩子先过一道:可拦截、可改写<br>After 钩子再补一道:只观察、只落盘</p>
+        <p style="font-size:18px;"><span class="hi">敏感词进"落盘/外发"工具 → blocked</span></p>
+        <p style="font-size:18px;color:#6b7a99;">普通工具带敏感词 → 参数打码后放行,每次调用都进审计日志</p>
+      </div>
+    </div>
+    <p style="text-align:center; margin-top:24px; font-size:22px; color:#00d4ff;">Hook = 挂在工具调用"前后"的回调函数,能力越强,越需要约束</p>
+    <p style="text-align:center; margin-top:16px; font-size:16px; color:#6b7a99;">类比机场安检:旅客(LLM 的 tool_call)再急也要过安检门(Before Hook),行李(参数)可疑可以重新打包(打码),全程有监控录像(After Hook 审计)。</p>
+  </section>
+
+  <!-- Slide 3: 核心公式 -->
+  <section class="slide">
+    <div class="slide-tag">FORMULA</div>
+    <div class="slide-num">03 / 10</div>
+    <h2>工具调用的安检流水线</h2>
+    <div style="display:flex; align-items:center; justify-content:center; gap:18px; flex-wrap:wrap; margin:40px 0;">
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">tool_call</div>
+        <div class="big-label" style="font-size:17px;">LLM 发起调用</div>
+      </div>
+      <div style="font-size:36px; color:#00d4ff;">→</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">Before</div>
+        <div class="big-label" style="font-size:17px;">钩子链:拦截 / 改写</div>
+      </div>
+      <div style="font-size:36px; color:#00d4ff;">→</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">execute</div>
+        <div class="big-label" style="font-size:17px;">真正执行工具</div>
+      </div>
+      <div style="font-size:36px; color:#00d4ff;">→</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">After</div>
+        <div class="big-label" style="font-size:17px;">钩子链:审计落盘</div>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:26px; color:#e8ecf5; margin-top:20px;">任何 Before Hook 说 <span class="warn">block</span> 就短路;<span style="color:#00d4ff; font-weight:700;">改写</span>的话参数以改后为准</p>
+    <table style="font-size:16px; margin-top:10px;">
+      <thead>
+        <tr><th>三态</th><th>status</th><th>含义</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>ok</strong></td><td><code style="color:#98c379;">"ok"</code></td><td>钩子没动过,参数原样执行</td></tr>
+        <tr><td><strong>masked</strong></td><td><code style="color:#e06c75;">"masked"</code></td><td>参数被 Before Hook 打码后放行</td></tr>
+        <tr><td><strong>blocked</strong></td><td><code style="color:#ffb400;">"blocked"</code></td><td>被拦截,工具压根没执行</td></tr>
+      </tbody>
+    </table>
+    <p style="text-align:center; margin-top:10px; font-size:16px; color:#6b7a99;">被拦截不是抛异常——组装成一条正常的工具结果(带 reason 和 hint)还给 LLM,让它能向用户解释"为什么没存"。拦截是给 LLM 的反馈,不是给程序的异常。</p>
+  </section>
+
+  <!-- Slide 4: 课程地图 -->
+  <section class="slide">
+    <div class="slide-tag">ROADMAP</div>
+    <div class="slide-num">04 / 10</div>
+    <h2>15 期课程地图 · 本期位置</h2>
+    <table>
+      <thead>
+        <tr><th>篇章</th><th>期号</th><th>核心能力</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>准备篇</strong></td><td>01</td><td>认识 Agent + 开工准备</td></tr>
+        <tr><td><strong>基础篇</strong></td><td>02-06</td><td>循环 · history · system prompt · tool · skills</td></tr>
+        <tr><td><strong>进阶篇</strong></td><td>07-10</td><td>记忆 · 规划 · 子代理 · 团队</td></tr>
+        <tr style="background:rgba(0,212,255,0.1);"><td><strong>高阶篇</strong></td><td><strong>11-13</strong></td><td><strong>MCP · Hooks(本期) · 多模型路由</strong></td></tr>
+        <tr><td><strong>实战篇</strong></td><td>14-15</td><td>目标驱动 · 部署上线</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">累积式写法:每期保留前期全部代码,只新增一个能力。<span class="hi">step12 = step11 + Hooks</span>——MCP、团队、子代理、技能、记忆全部保留,只新增钩子层 + 2 个工具。</p>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">Hooks 挂在工具循环里,意味着 22 个工具(含 MCP 外接工具)统一过安检——这是全 Agent 唯一的挂载点,也是它威力所在。</p>
+  </section>
+
+  <!-- Slide 5: 核心步骤 -->
+  <section class="slide">
+    <div class="slide-tag">STEPS</div>
+    <div class="slide-num">05 / 10</div>
+    <h2>三类钩子 + 两个新工具</h2>
+    <ol>
+      <li><strong>Before · 拦截型</strong> — <code style="color:#00d4ff;">_hook_sensitive_guard</code>:工具在保护名单 + 命中敏感词 → 直接 block</li>
+      <li><strong>Before · 改写型</strong> — <code style="color:#00d4ff;">_hook_sensitive_masker</code>:其余工具命中 → 参数打码(<span class="hi">sk-demo-***</span>)后放行</li>
+      <li><strong>After · 观察型</strong> — <code style="color:#00d4ff;">_hook_audit_logger</code>:不拦不改,把调用记录追加进 audit_log.jsonl</li>
+    </ol>
+    <table style="margin-top:22px; font-size:16px;">
+      <thead>
+        <tr><th>新工具(20 → 22)</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code style="color:#00d4ff;">list_hooks</code></td><td>查看注册了哪些钩子(before/after 各几个)</td></tr>
+        <tr><td><code style="color:#00d4ff;">view_audit_log</code></td><td>回放最近 N 条操作审计记录</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">两类工具两种策略:save_user_profile / mcp_call_tool / send_message 等 6 个"落盘/外发"工具硬拦截,其余工具只打码——教学上一次演示 block 和 rewrite 两种 Hook 能力。</p>
+  </section>
+
+  <!-- Slide 6: 代码命令 -->
+  <section class="slide">
+    <div class="slide-tag">COMMANDS</div>
+    <div class="slide-num">06 / 10</div>
+    <h2>跑起来 · 看安检真的在工作</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+      <div>
+        <p style="margin:0 0 8px; color:#00d4ff; font-size:15px;">① 启动(两段自动演示)</p>
+        <pre style="margin:0;"><code><span class="com"># 演示 1:让 Alex 把 API 密钥存进用户画像</span>
+<span class="com"># → Before Hook 拦截,工具没执行</span>
+
+<span class="com"># 演示 2:查时间 + 算数 + 汇报审计日志</span>
+<span class="com"># → 每次调用都被记录,含被拦的那条</span>
+
+python code/step12_hooks.py</code></pre>
+      </div>
+      <div>
+        <p style="margin:0 0 8px; color:#00d4ff; font-size:15px;">② 交互命令</p>
+        <pre style="margin:0;"><code><span class="fn">hooks</span>    <span class="com"># 查看钩子面板(名称/类型/职责)</span>
+<span class="fn">audit</span>    <span class="com"># 查看审计面板(最近调用记录)</span>
+<span class="fn">tools</span>    <span class="com"># 22 个工具,含 MCP 与新钩子工具</span>
+<span class="fn">team</span>     <span class="com"># 团队仍在,同样过安检</span>
+
+<span class="com"># 审计日志落盘位置:</span>
+<span class="com"># data/memory/audit_log.jsonl</span></code></pre>
+      </div>
+    </div>
+    <p style="margin-top:14px; font-size:14px; color:#6b7a99;">聊天中直接说"把我的身份证号 110101199001011234 存进用户档案"——save_user_profile 在保护名单,直接被 blocked;说"用 calculate 算一下我的密码位数 16"——calculate 不在名单,参数被打码后照常执行。两种命运,一目了然。</p>
+  </section>
+
+  <!-- Slide 7: 核心代码 -->
+  <section class="slide">
+    <div class="slide-tag">CODE</div>
+    <div class="slide-num">07 / 10</div>
+    <h2>核心代码 · 工具循环里的挂载点</h2>
+    <pre><code><span class="kw">for</span> tool_call <span class="kw">in</span> msg.tool_calls:
+    fn_name = tool_call.function.name
+    fn_args = json.loads(tool_call.function.arguments)
+
+    <span class="com"># ↓ 本期新增:Before 钩子链(拦截 / 改写)</span>
+    blocked, fn_args, hook_note = <span class="fn">run_before_hooks</span>(fn_name, fn_args)
+    <span class="kw">if</span> blocked:
+        status = <span class="str">"blocked"</span>                          <span class="com"># 工具压根不执行</span>
+        result = json.dumps({<span class="str">"error"</span>: <span class="str">"工具调用被 Before Hook 拦截,未执行"</span>,
+            <span class="str">"hook"</span>: <span class="str">"sensitive_word_guard"</span>, <span class="str">"reason"</span>: hook_note, ...})
+    <span class="kw">else</span>:
+        status = <span class="str">"masked"</span> <span class="kw">if</span> hook_note <span class="kw">else</span> <span class="str">"ok"</span>       <span class="com"># 打码 or 原样</span>
+        result = <span class="fn">execute_tool</span>(fn_name, fn_args)          <span class="com"># 真正执行</span>
+
+    <span class="com"># ↓ 本期新增:After 钩子链(审计落盘)</span>
+    <span class="fn">run_after_hooks</span>(fn_name, fn_args, result, status, duration_ms)</code></pre>
+    <p style="margin-top:14px; font-size:15px; color:#6b7a99;">HOOKS = {"before": [...], "after": [...]} 是注册表,run_before_hooks / run_after_hooks 按注册顺序执行钩子链——任何一个 Before Hook 拦截即短路返回。</p>
+    <p style="margin-top:10px; font-size:16px; color:#6b7a99;">教学要点:改写发生在执行前,所以工具"看到"的就是打码后的参数;审计发生在执行后,所以日志能记下 status 三态。位置决定职责。</p>
+  </section>
+
+  <!-- Slide 8: Why 对比 -->
+  <section class="slide">
+    <div class="slide-tag">WHY</div>
+    <div class="slide-num">08 / 10</div>
+    <h2>为什么 Agent 需要 Hooks?</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>😖 没有 Hooks(裸奔)</h3>
+        <p style="font-size:17px;">提示注入诱导外发数据 → 照发不误</p>
+        <p style="font-size:17px;">用户口述密钥 → 直接写进用户档案</p>
+        <p style="font-size:17px;">安全规则散落在各工具函数里,改一处漏一处</p>
+        <p style="font-size:17px;">出了事想回放 → 无凭无据</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>😌 有 Hooks(本期)</h3>
+        <p style="font-size:17px;">同一套安检策略,对 22 个工具统一生效</p>
+        <p style="font-size:17px;">敏感词分级:落盘/外发拦截,普通工具打码</p>
+        <p style="font-size:17px;">加策略 = 往 HOOKS 注册表加一个函数,核心零改动</p>
+        <p style="font-size:17px;">audit_log.jsonl = Agent 行为的行车记录仪</p>
+      </div>
+    </div>
+    <p style="margin-top:18px; text-align:center; font-size:18px; color:#00d4ff;">前 11 期管"能力",本期管"约束"——生产 Agent 的分水岭。</p>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">MCP 把能力边界推到进程之外,Hooks 在边界上设卡。审计日志不是"成功日志"——blocked 的调用恰恰最值得记录:拦下了什么、为什么拦,都在里面。</p>
+  </section>
+
+  <!-- Slide 9: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">09 / 10</div>
+    <h2>试一试 · 4 个实验</h2>
+    <ul>
+      <li>跑 <code style="color:#00d4ff;">python code/step12_hooks.py</code>,看两段自动演示:① 密钥存储被拦截 ② 审计日志回放(连被拦那条都在)</li>
+      <li>输入 <span class="hi">"把我的 API 密钥 sk-abc-123456 存进用户档案"</span> → 观察 save_user_profile 被 blocked;<br><span style="font-size:14px; color:#6b7a99;">再换一个不在保护名单的工具带敏感词,看它被"打码放行"——block 与 rewrite 两种命运</span></li>
+      <li>让 Agent 调一个 MCP 工具(先 mcp_connect)—— <span class="hi">外接工具同样过安检</span>,证明挂载点是全局唯一</li>
+      <li>给 SENSITIVE_WORDS <span class="warn">自己加一个敏感词</span>(如"工资"),或往 HOOKS 加一个自定义钩子 —— 体会"策略即数据"</li>
+    </ul>
+    <div style="margin-top:28px; padding:20px; background:rgba(0,212,255,0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 学完这一期,你能回答:为什么拦截要"组装成工具结果还给 LLM",而不是直接抛异常?—— 因为 Agent 的闭环靠消息驱动,LLM 收到 reason 才能向用户解释,而不是程序崩掉。</p>
+    </div>
+  </section>
+
+  <!-- Slide 10: 下一期预告 -->
+  <section class="slide cover">
+    <div class="slide-tag">NEXT</div>
+    <div class="slide-num">10 / 10</div>
+    <h1 style="font-size:60px;">第 13 期<br>多模型路由</h1>
+    <div class="subtitle" style="margin-top:32px;">D E E P S E E K&nbsp;&nbsp;/&nbsp;&nbsp;C L A U D E&nbsp;&nbsp;/&nbsp;&nbsp;L O C A L</div>
+    <p style="margin-top:40px; font-size:22px; color:#b8c5d6; max-width:640px;">简单任务给便宜模型,硬骨头给旗舰模型:<br>按任务难度动态切换,还带成本统计。</p>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99; max-width:640px;">Hooks 管住了每一次调用,多模型路由管住每一次"思考"的成本。</p>
+    <p style="margin-top:40px; font-size:14px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:2px;">— END OF EPISODE 12 —</p>
+    <p style="margin-top:24px; font-size:15px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:1px;">源码地址 · <a href="https://github.com/senfel/agent-teaching-course.git" style="color:#00d4ff; text-decoration:none; border-bottom:1px solid rgba(0,212,255,0.5);">github.com/senfel/agent-teaching-course</a></p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 10</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
