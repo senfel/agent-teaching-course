@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 13 期 · 多模型路由(自动选模型 + 成本 telemetry)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 76px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 18px; }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 16px; line-height: 1.65; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.85; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .center-row { display: flex; align-items: center; justify-content: center; gap: 60px; flex-wrap: wrap; }
+  .diagram { max-width: 520px; width: 100%; }
+  .big-num { font-size: 96px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 22px; color: #b8c5d6; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 13</div>
+    <div class="slide-num">01 / 10</div>
+    <h1>多模型路由<br>自动选模型 + 成本 telemetry</h1>
+    <div class="subtitle">R O U T E&nbsp;&nbsp;/&nbsp;&nbsp;S W I T C H&nbsp;&nbsp;/&nbsp;&nbsp;M E A S U R E</div>
+    <div class="meta">15 期系列 · 第 13 期 · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:640px;">前 12 期 Alex 只有一个"大脑"——不管问题是查时间还是做架构评审,<br>都发给同一个模型,按同一个价。这一期装上"调度台":任务简单走便宜档,<br>硬骨头上旗舰档,每一分钱都记账。</p>
+  </section>
+
+  <!-- Slide 2: 概念对比 -->
+  <section class="slide">
+    <div class="slide-tag">CONCEPT</div>
+    <div class="slide-num">02 / 10</div>
+    <h2>单模型写死 vs 多模型路由 —— 从"一个大脑"到"调度台"</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>🧠 单模型写死(第 12 期)</h3>
+        <p style="font-size:18px;">每次调用都写死 <code style="color:#00d4ff;">model=MODEL</code><br>查时间和做架构评审,用同一个模型</p>
+        <p style="font-size:18px;"><span class="warn">简单任务也在烧旗舰的钱</span></p>
+        <p style="font-size:18px;color:#6b7a99;">月底看账单:只知道花了多少,不知道花在哪、值不值</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>🛫 多模型路由(本期)</h3>
+        <p style="font-size:18px;">调用前先问路由器:这活儿该给谁?<br>简单 → light 档,复杂 → heavy 档,后台 → 永远便宜档</p>
+        <p style="font-size:18px;"><span class="hi">调用后记账:token × 单价 → usage_log.jsonl</span></p>
+        <p style="font-size:18px;color:#6b7a99;">运行实测:12 次调用 $0.037,若全用 claude-sonnet 要 $0.269 —— 省 86%</p>
+      </div>
+    </div>
+    <p style="text-align:center; margin-top:24px; font-size:22px; color:#00d4ff;">路由 = 在"调用"和"模型"之间加一个决策层;telemetry = 给每次调用装一个计价器</p>
+    <p style="text-align:center; margin-top:16px; font-size:16px; color:#6b7a99;">类比出租车调度:接个机就用经济型,跑长途商务就上商务舱。车队(模型池)在注册表里,派单规则(路由策略)在路由器里,谁跑了多少公里花了多少钱(成本)在台账里。</p>
+  </section>
+
+  <!-- Slide 3: 核心公式 -->
+  <section class="slide">
+    <div class="slide-tag">FORMULA</div>
+    <div class="slide-num">03 / 10</div>
+    <h2>每次 LLM 调用的路由流水线</h2>
+    <div style="display:flex; align-items:center; justify-content:center; gap:18px; flex-wrap:wrap; margin:40px 0;">
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">messages</div>
+        <div class="big-label" style="font-size:17px;">本轮要聊什么</div>
+      </div>
+      <div style="font-size:36px; color:#00d4ff;">→</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">route</div>
+        <div class="big-label" style="font-size:17px;">路由:选模型 + 记理由</div>
+      </div>
+      <div style="font-size:36px; color:#00d4ff;">→</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">call</div>
+        <div class="big-label" style="font-size:17px;">真实 API 调用</div>
+      </div>
+      <div style="font-size:36px; color:#00d4ff;">→</div>
+      <div style="text-align:center;">
+        <div class="big-num" style="font-size:44px;">meter</div>
+        <div class="big-label" style="font-size:17px;">记账:成本落盘</div>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:24px; color:#e8ecf5; margin-top:10px;">cost = <span style="color:#00d4ff; font-family:'SF Mono',Menlo,monospace;">prompt_tokens/1e6 × input_price</span> + <span style="color:#00d4ff; font-family:'SF Mono',Menlo,monospace;">completion_tokens/1e6 × output_price</span></p>
+    <table style="font-size:16px; margin-top:10px;">
+      <thead>
+        <tr><th>路由路径</th><th>什么时候走</th><th>结果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>auto · 规则</strong></td><td>命中复杂关键词(审查/分析/设计…)或消息超 400 字符</td><td>heavy 档(deepseek-reasoner)</td></tr>
+        <tr><td><strong>auto · 默认</strong></td><td>简单任务:无关键词、消息不长</td><td>light 档(deepseek-chat)</td></tr>
+        <tr><td><strong>background</strong></td><td>compact 压缩 / 子代理 / 队友调用</td><td>固定 light 档(省钱策略)</td></tr>
+        <tr><td><strong>manual</strong></td><td>用户 switch_model 钉住某模型</td><td>钉住的模型,直到切回 auto</td></tr>
+      </tbody>
+    </table>
+    <p style="text-align:center; margin-top:10px; font-size:16px; color:#6b7a99;">单价不是写死的数字,而是 MODEL_REGISTRY 注册表里的字段——换模型、调价格,只改注册表;路由规则和记账公式一行不动。</p>
+  </section>
+
+  <!-- Slide 4: 课程地图 -->
+  <section class="slide">
+    <div class="slide-tag">ROADMAP</div>
+    <div class="slide-num">04 / 10</div>
+    <h2>15 期课程地图 · 本期位置</h2>
+    <table>
+      <thead>
+        <tr><th>篇章</th><th>期号</th><th>核心能力</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>准备篇</strong></td><td>01</td><td>认识 Agent + 开工准备</td></tr>
+        <tr><td><strong>基础篇</strong></td><td>02-06</td><td>循环 · history · system prompt · tool · skills</td></tr>
+        <tr><td><strong>进阶篇</strong></td><td>07-10</td><td>记忆 · 规划 · 子代理 · 团队</td></tr>
+        <tr style="background:rgba(0,212,255,0.1);"><td><strong>高阶篇</strong></td><td><strong>11-13</strong></td><td><strong>MCP · Hooks · 多模型路由(本期)</strong></td></tr>
+        <tr><td><strong>实战篇</strong></td><td>14-15</td><td>目标驱动 · 部署上线</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">累积式写法:每期保留前期全部代码,只新增一个能力。<span class="hi">step13 = step12 + 多模型路由</span>——MCP、Hooks、团队、子代理、技能、记忆全部保留,只新增注册表 + 路由器 + 记账器 + 3 个工具。</p>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">连续三期的"挂载哲学":第 11 期 MCP 把工具边界推到进程外,第 12 期 Hooks 在工具调用前后设卡,本期 llm_call 把"所有模型调用"收编成一个入口——位置决定职责。</p>
+  </section>
+
+  <!-- Slide 5: 核心步骤 -->
+  <section class="slide">
+    <div class="slide-tag">STEPS</div>
+    <div class="slide-num">05 / 10</div>
+    <h2>三层结构 + 三个新工具</h2>
+    <ol>
+      <li><strong>注册表层</strong> — <code style="color:#00d4ff;">MODEL_REGISTRY</code>:每个模型的档位/单价/强项/api_model;4 个模型进池子(light×2 + heavy×2)</li>
+      <li><strong>路由层</strong> — <code style="color:#00d4ff;">route_model / resolve_model</code>:关键词 + 长度规则自动选档;manual 钉住优先;后台任务固定 light 档</li>
+      <li><strong>挂载点</strong> — <code style="color:#00d4ff;">llm_call</code>:全部 LLM 调用的唯一入口,路由在前、记账在后;main/compact/subagent/team 四处调用点全部收编</li>
+    </ol>
+    <table style="margin-top:22px; font-size:16px;">
+      <thead>
+        <tr><th>新工具(22 → 25)</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code style="color:#00d4ff;">list_models</code></td><td>查看模型池:档位、单价、强项 + 当前路由模式</td></tr>
+        <tr><td><code style="color:#00d4ff;">switch_model</code></td><td>auto/manual 切换;manual 需给 model_id(还能附任务说明)</td></tr>
+        <tr><td><code style="color:#00d4ff;">cost_report</code></td><td>成本报表:各模型 token 用量与美元花费</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">为什么 LLM 自己需要这些工具?当用户说"这题用强模型做"时,Alex 能自己调 switch_model 钉住旗舰档——模型选择从"用户配置"升级成"Agent 可操作的技能"。</p>
+  </section>
+
+  <!-- Slide 6: 代码命令 -->
+  <section class="slide">
+    <div class="slide-tag">COMMANDS</div>
+    <div class="slide-num">06 / 10</div>
+    <h2>跑起来 · 看路由和账本真的在工作</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+      <div>
+        <p style="margin:0 0 8px; color:#00d4ff; font-size:15px;">① 启动(两段自动演示)</p>
+        <pre style="margin:0;"><code><span class="com"># 演示 1:简单任务"现在几点"</span>
+<span class="com"># → 无复杂关键词 → light 档 deepseek-chat</span>
+
+<span class="com"># 演示 2:复杂任务"分析对比两个方案"</span>
+<span class="com"># → 命中关键词"分析" → heavy 档 deepseek-reasoner</span>
+<span class="com"># → 顺带调 cost_report 工具汇报账单</span>
+
+python code/step13_model_router.py</code></pre>
+      </div>
+      <div>
+        <p style="margin:0 0 8px; color:#00d4ff; font-size:15px;">② 交互命令</p>
+        <pre style="margin:0;"><code><span class="fn">models</span>   <span class="com"># 模型面板:4 个模型/档位/单价</span>
+<span class="fn">cost</span>     <span class="com"># 成本面板:总花费 + 各模型占比</span>
+<span class="fn">tools</span>    <span class="com"># 25 个工具,含 3 个新路由工具</span>
+<span class="fn">hooks</span>    <span class="com"># 第 12 期安检仍在</span>
+
+<span class="com"># 每轮回复后打印模型路由面板(用到谁/为什么)</span>
+<span class="com"># 成本记账落盘:data/memory/usage_log.jsonl</span></code></pre>
+      </div>
+    </div>
+    <p style="margin-top:14px; font-size:14px; color:#6b7a99;">聊天里直接说"帮我分析一下记忆系统的设计"——观察每轮回复后的路由面板从 deepseek-chat 跳到 deepseek-reasoner;再说"用 claude-sonnet 做,做完切回来"——看 Alex 自己调 switch_model 完成钉住和恢复。</p>
+  </section>
+
+  <!-- Slide 7: 核心代码 -->
+  <section class="slide">
+    <div class="slide-tag">CODE</div>
+    <div class="slide-num">07 / 10</div>
+    <h2>核心代码 · llm_call 统一入口</h2>
+    <pre><code><span class="kw">def</span> <span class="fn">llm_call</span>(messages, task=<span class="str">"main"</span>, tools=<span class="kw">None</span>, max_tokens=<span class="var">4096</span>):
+    <span class="com"># ① 路由:决定这次调用用哪个模型</span>
+    model_id, reason = <span class="fn">resolve_model</span>(messages, task=task)   <span class="com"># manual钉住 &gt; 后台light &gt; auto规则</span>
+    <span class="fn">_record_route</span>(model_id, reason, task)                     <span class="com"># 打印 + 路由历史</span>
+    api_model = MODEL_REGISTRY[model_id][<span class="str">"api_model"</span>]         <span class="com"># 逻辑名 → 真实端点名</span>
+
+    <span class="com"># ② 调用:按注册表映射发往真实端点</span>
+    kwargs = {<span class="str">"model"</span>: api_model, <span class="str">"messages"</span>: messages, <span class="str">"max_tokens"</span>: max_tokens}
+    <span class="kw">if</span> tools:
+        kwargs[<span class="str">"tools"</span>] = tools; kwargs[<span class="str">"tool_choice"</span>] = <span class="str">"auto"</span>
+    response = client.chat.completions.<span class="fn">create</span>(**kwargs)
+
+    <span class="com"># ③ 记账:成本 telemetry(token × 单价 → 美元)</span>
+    <span class="fn">log_usage</span>(model_id, response.usage.prompt_tokens,
+              response.usage.completion_tokens, task)          <span class="com"># → usage_log.jsonl</span>
+    <span class="kw">return</span> response, model_id</code></pre>
+    <p style="margin-top:14px; font-size:15px; color:#6b7a99;">第 12 期四处直接调 client.chat.completions.create(model=MODEL) 的地方(main 工具循环 / compact 压缩 / 子代理 / 队友),本期全部改成 llm_call——一处收编,处处路由。</p>
+    <p style="margin-top:10px; font-size:16px; color:#6b7a99;">教学环境只有一个 DeepSeek key:claude-sonnet / local-qwen 用 DeepSeek 端点"模拟"——路由和计费机制与生产完全一致。生产接入真实供应商只改注册表和 base_url,主逻辑零改动,这就是"路由层抽象供应商差异"。</p>
+  </section>
+
+  <!-- Slide 8: Why 对比 -->
+  <section class="slide">
+    <div class="slide-tag">WHY</div>
+    <div class="slide-num">08 / 10</div>
+    <h2>为什么 Agent 需要多模型路由?</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>😖 没有路由(一个大脑)</h3>
+        <p style="font-size:17px;">查时间也用旗舰模型 → 按 token 白烧钱</p>
+        <p style="font-size:17px;">compact/子代理/队友全走同一个贵模型</p>
+        <p style="font-size:17px;">想换供应商 → 满屏 model=XXX 到处改</p>
+        <p style="font-size:17px;">月底账单一笔总账,看不出哪个任务在吃钱</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>😌 有路由(调度台)</h3>
+        <p style="font-size:17px;">简单任务走 light 档,后台任务永远 light 档</p>
+        <p style="font-size:17px;">换供应商 = 注册表加一行 + 改一个 base_url</p>
+        <p style="font-size:17px;">钉住/自动切换,是 Agent 可自调用的工具</p>
+        <p style="font-size:17px;">usage_log.jsonl 按模型/任务记账,花在哪一目了然</p>
+      </div>
+    </div>
+    <p style="margin-top:18px; text-align:center; font-size:18px; color:#00d4ff;">前 12 期管"能力和约束",本期管"经济账"——生产 Agent 的成本分水岭。</p>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">Telemetry 的意义不只是省钱:知道每个任务类型烧多少 token,才知道该给哪类任务配什么档——"省 86%"是路由策略带来的,但结论是数据告诉你的。</p>
+  </section>
+
+  <!-- Slide 9: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">09 / 10</div>
+    <h2>试一试 · 4 个实验</h2>
+    <ul>
+      <li>跑 <code style="color:#00d4ff;">python code/step13_model_router.py</code>,看两段自动演示:① 简单任务路由到 light 档 ② 复杂任务命中"分析"上 heavy 档 + 成本汇报</li>
+      <li>输入 <span class="hi">"帮我分析一下当前的记忆系统设计"</span> → 看每轮回复后的路由面板跳到 deepseek-reasoner;<br><span style="font-size:14px; color:#6b7a99;">再输入"现在几点",看它跳回 deepseek-chat——同一会话,两档模型,全自动</span></li>
+      <li>说 <span class="warn">"接下来用 claude-sonnet 回答"</span> → Alex 自己调 switch_model 钉住 heavy 贵档;再让它切回 auto——体会"模型选择成为 Agent 技能"</li>
+      <li>打开 <code style="color:#00d4ff;">data/memory/usage_log.jsonl</code> 看每一笔账;或给 HEAVY_KEYWORDS <span class="warn">自己加一个关键词</span>(如"复盘"),下一轮立刻生效——"策略即数据"</li>
+    </ul>
+    <div style="margin-top:28px; padding:20px; background:rgba(0,212,255,0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 学完这一期,你能回答:为什么后台任务(compact/子代理/队友)不给路由器自主决策,而是固定 light 档?—— 因为它们的任务是受限小任务,再强的推理力也用不上;固定便宜档,路由策略本身就是省钱策略。</p>
+    </div>
+  </section>
+
+  <!-- Slide 10: 下一期预告 -->
+  <section class="slide cover">
+    <div class="slide-tag">NEXT</div>
+    <div class="slide-num">10 / 10</div>
+    <h1 style="font-size:60px;">第 14 期<br>目标驱动 Agent</h1>
+    <div class="subtitle" style="margin-top:32px;">G O A L&nbsp;&nbsp;/&nbsp;&nbsp;L O O P&nbsp;&nbsp;/&nbsp;&nbsp;C H E C K P O I N T</div>
+    <p style="margin-top:40px; font-size:22px; color:#b8c5d6; max-width:640px;">给模糊目标"帮我优化这个仓库的 README",<br>Agent 自己拆解、自己跑循环、自己验收。</p>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99; max-width:640px;">多模型路由管住了每次"思考"的成本,目标驱动让 Agent 拿着一个目标自己跑到终点。</p>
+    <p style="margin-top:40px; font-size:14px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:2px;">— END OF EPISODE 13 —</p>
+    <p style="margin-top:24px; font-size:15px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:1px;">源码地址 · <a href="https://github.com/senfel/agent-teaching-course.git" style="color:#00d4ff; text-decoration:none; border-bottom:1px solid rgba(0,212,255,0.5);">github.com/senfel/agent-teaching-course</a></p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 10</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
