@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 14 期 · 目标驱动 Agent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 76px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 18px; }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 16px; line-height: 1.65; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.85; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .center-row { display: flex; align-items: center; justify-content: center; gap: 60px; flex-wrap: wrap; }
+  .diagram { max-width: 520px; width: 100%; }
+  .big-num { font-size: 96px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 22px; color: #b8c5d6; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 14</div>
+    <div class="slide-num">01 / 10</div>
+    <h1>目标驱动 Agent</h1>
+    <div class="subtitle">G O A L&nbsp;&nbsp;D R I V E N&nbsp;&nbsp;A G E N T</div>
+    <div class="meta">15 期系列 · 第 14 期 · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:680px;">前 13 期我们一直在"你说一句,它做一句"。<br>这一期,给 Alex 一个模糊目标:"帮我优化这个仓库的 README",<br>它自己订契约、自己规划、自己打 checkpoint,直到验收达标或预算耗尽。</p>
+  </section>
+
+  <!-- Slide 2: 概念对比 -->
+  <section class="slide">
+    <div class="slide-tag">CONCEPT</div>
+    <div class="slide-num">02 / 10</div>
+    <h2>被动应答 vs 目标驱动 —— 差在哪</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>🧾 被动应答(第 13 期及以前)</h3>
+        <p style="font-size:18px;">用户说一步,Agent 做一步</p>
+        <p style="font-size:18px;">目标模糊 → <span class="warn">泛泛而谈</span>("优化 README 可以从以下几方面…")</p>
+        <p style="font-size:18px;">复杂任务要人盯着,一轮轮追问"然后呢"</p>
+        <p style="font-size:18px;">没有停止条件:要么烂尾,要么烧钱</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>🎯 目标驱动(本期)</h3>
+        <p style="font-size:18px;">给一个模糊目标,还一份验收报告</p>
+        <p style="font-size:18px;"><span class="hi">先订契约</span>:目标 + 可判定的验收标准 + 预算</p>
+        <p style="font-size:18px;">外层控制循环自主推进多轮,用户只看 checkpoint</p>
+        <p style="font-size:18px;">三种停止:达标停 / 受阻止损 / 预算封顶</p>
+      </div>
+    </div>
+    <p style="text-align:center; margin-top:24px; font-size:22px; color:#00d4ff;">Agent 缺的不是能力,是<span class="hi">目标感</span></p>
+    <p style="text-align:center; margin-top:16px; font-size:16px; color:#6b7a99;">你让 ChatGPT"优化一下 README",它十有八九回你一篇正确的废话 —— 不是它没能力,是它不知道"做到什么程度算完成"。</p>
+  </section>
+
+  <!-- Slide 3: 核心公式 -->
+  <section class="slide">
+    <div class="slide-tag">FORMULA</div>
+    <div class="slide-num">03 / 10</div>
+    <h2>目标契约的四要素</h2>
+    <div style="display:flex; align-items:center; justify-content:center; gap:24px; flex-wrap:wrap; margin:40px 0;">
+      <div style="text-align:center;">
+        <div class="big-num">GOAL</div>
+        <div class="big-label">做什么</div>
+      </div>
+      <div style="font-size:48px; color:#00d4ff;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num">CRIT</div>
+        <div class="big-label">怎么算完成</div>
+      </div>
+      <div style="font-size:48px; color:#00d4ff;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num">BUD</div>
+        <div class="big-label">预算几轮</div>
+      </div>
+      <div style="font-size:48px; color:#00d4ff;">+</div>
+      <div style="text-align:center;">
+        <div class="big-num">STAT</div>
+        <div class="big-label">当前状态</div>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:26px; color:#e8ecf5; margin-top:20px;">= <span style="color:#00d4ff; font-weight:700;">目标契约 GOAL_STATE</span></p>
+    <p style="text-align:center; margin-top:16px; font-size:16px; color:#6b7a99;">验收标准是灵魂:写"每条建议附理由"(可判定),不写"写得更好"(没法判定)。契约订立后,一切执行和自评都对照它 —— 它是循环的锚。</p>
+  </section>
+
+  <!-- Slide 4: 课程地图 -->
+  <section class="slide">
+    <div class="slide-tag">ROADMAP</div>
+    <div class="slide-num">04 / 10</div>
+    <h2>15 期课程地图 · 第 14 期位置</h2>
+    <table>
+      <thead>
+        <tr><th>篇章</th><th>期号</th><th>核心能力</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>准备篇</strong></td><td>01</td><td>认识 Agent + 开工准备</td></tr>
+        <tr><td><strong>基础篇</strong></td><td>02-06</td><td>循环 · history · system prompt · tool · skills</td></tr>
+        <tr><td><strong>进阶篇</strong></td><td>07-10</td><td>记忆 · 规划 · 子代理 · 团队</td></tr>
+        <tr><td><strong>高阶篇</strong></td><td>11-13</td><td>MCP · Hooks · 多模型路由</td></tr>
+        <tr><td><strong>实战篇</strong></td><td><span class="hi">14(本期)</span></td><td><strong>目标驱动:契约 + 控制循环 + checkpoint</strong></td></tr>
+        <tr><td><strong>实战篇</strong></td><td>15</td><td>部署上线 + 课程总结(最终期)</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">前面 13 期装的所有能力(工具/记忆/规划/子代理/团队/MCP/Hooks/路由),本期第一次被一个"目标"统一调动起来 —— 它们全是内层循环干活的手段,外层循环给它们方向。</p>
+  </section>
+
+  <!-- Slide 5: 核心步骤 -->
+  <section class="slide">
+    <div class="slide-tag">CORE LOOP</div>
+    <div class="slide-num">05 / 10</div>
+    <h2>控制循环 · 一个循环套一个循环</h2>
+    <ol>
+      <li><strong>订约(Phase 1)</strong> — Agent 调 set_goal,把模糊目标改写成"目标 + 验收标准 + 预算"</li>
+      <li><strong>执行(Phase 2)</strong> — 外层塞控制指令 → 内层 chat_with_tools 用 TodoList/子代理/MCP 干活</li>
+      <li><strong>checkpoint</strong> — 每轮结束 Agent 必须调 check_goal,对照验收标准如实自评并落盘</li>
+      <li><strong>判停</strong> — 看契约状态:done 停(达标)/ blocked 停(止损)/ failed 停(做不成);预算跑完仍 in_progress → 强制 failed(封顶止损)</li>
+      <li><strong>验收汇报(Phase 3b)</strong> — 循环结束后对照契约逐条交代"是否达标、产出在哪里" —— 模糊目标进去,一份验收报告出来</li>
+    </ol>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">外层 run_goal_loop 管"推进和停止",内层还是第 05 期的工具循环管"这一轮怎么干活"—— 这是整个课程第一次出现双层循环:意志(LOOP)升级成了目标感(GOAL)。</p>
+  </section>
+
+  <!-- Slide 6: 代码命令 -->
+  <section class="slide">
+    <div class="slide-tag">RUN IT</div>
+    <div class="slide-num">06 / 10</div>
+    <h2>跑起来 · 命令与演示</h2>
+    <pre style="margin:0;"><code><span class="com"># 启动(自动跑两个演示,然后进入自由对话)</span>
+python code/step14_goal_agent.py
+
+<span class="com"># 演示 1:模糊目标全流程</span>
+<span class="com">#   "帮我优化这个仓库的 README"</span>
+<span class="com">#   → 订契约 → 拆步骤 → 执行 → checkpoint → 结算 → 最终验收汇报</span>
+
+<span class="com"># 演示 2:目标复盘</span>
+<span class="com">#   goal_status 汇报 checkpoint 历史 + cost_report 汇报账单</span>
+
+<span class="com"># 自由对话里随时输入(新命令):</span>
+goal   <span class="com"># 查看目标面板(契约 + checkpoint 摘要)</span>
+目标:xxx  <span class="com"># 目标分流器:进入控制循环,自主推进到达标/预算耗尽</span></code></pre>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">启动时目标面板显示"无活跃目标";演示 1 跑完后,面板里能看到契约、预算消耗和每一轮的自评。自由对话里输入"目标:xxx"即可随时触发控制循环,其余输入照旧走被动应答 —— 显式触发,零误判。每轮 checkpoint 同时落盘 memory/goal_log.jsonl,退出后也能回放。</p>
+  </section>
+
+  <!-- Slide 7: 核心代码 -->
+  <section class="slide">
+    <div class="slide-tag">CODE</div>
+    <div class="slide-num">07 / 10</div>
+    <h2>核心代码 · 订约与自评</h2>
+    <pre style="margin:0;"><code><span class="com"># ① 订契约:模糊目标 → 结构化验收单</span>
+<span class="fn">set_goal</span>(
+    goal=<span class="str">"产出本仓库 README 的逐节优化方案"</span>,
+    success_criteria=[
+        <span class="str">"方案覆盖 README 现有全部小节,逐节给出保留/修改/删除建议"</span>,
+        <span class="str">"每条建议附理由"</span>,   <span class="com"># ← 可判定,不是"写得更好"</span>
+    ],
+    max_rounds=<span class="var">3</span>,                  <span class="com"># ← 预算:控制循环最多 3 轮</span>
+)
+
+<span class="com"># ② 打 checkpoint:对照验收标准如实自评,状态决定循环去留</span>
+<span class="fn">check_goal</span>(
+    assessment=<span class="str">"第1条已达标;第2条还差'安装'一节的理由"</span>,
+    new_status=<span class="str">"in_progress"</span>,      <span class="com"># done / blocked / failed / in_progress</span>
+    evidence=<span class="str">"优化方案已写到回复中,共 7 节"</span>,
+)</code></pre>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">set_goal 订的契约存进 GOAL_STATE,check_goal 每次自评更新状态机并追加 goal_log.jsonl。控制循环 run_goal_loop 只看契约状态决定继续还是停 —— 代码里没有一个"猜它做完没有"的 if,全部由 Agent 自己的自评驱动。</p>
+  </section>
+
+  <!-- Slide 8: Why 对比 -->
+  <section class="slide">
+    <div class="slide-tag">WHY</div>
+    <div class="slide-num">08 / 10</div>
+    <h2>目标契约 vs TodoList —— 别混着用</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>📋 TodoList(第 08 期)</h3>
+        <p style="font-size:17px;">管<strong>一轮对话内</strong>的步骤顺序</p>
+        <p style="font-size:17px;">回答:"这一轮先做什么后做什么"</p>
+        <p style="font-size:17px;">停止条件:清单勾完(单轮内)</p>
+        <p style="font-size:17px;">类比:施工排期表</p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>🎯 目标契约(本期)</h3>
+        <p style="font-size:17px;">管<strong>跨轮次</strong>的完成判定</p>
+        <p style="font-size:17px;">回答:"几轮之后,什么时候算完"</p>
+        <p style="font-size:17px;">停止条件:验收达标 / 受阻 / 预算耗尽</p>
+        <p style="font-size:17px;">类比:甲方验收单</p>
+      </div>
+    </div>
+    <p style="margin-top:20px; text-align:center; font-size:20px; color:#e8ecf5;">两者配合:每轮用 TodoList 排步骤干活,用 check_goal 向"甲方"汇报</p>
+    <p style="margin-top:14px; text-align:center; font-size:16px; color:#6b7a99;">为什么必须可判定 + 预算?LLM 有"讨好型人格"(你问做完了吗,它倾向说做完了)和"无限卷"(你不说停它一直干)两个毛病 —— 契约是防讨好,预算是防烧钱。</p>
+  </section>
+
+  <!-- Slide 9: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">09 / 10</div>
+    <h2>试一试 · 4 个实验</h2>
+    <ul>
+      <li>直接问"帮我优化这个 README"vs 输入"目标:帮我优化这个 README" —— <span class="warn">体会一个前缀,两种人生</span><br><span style="font-size:14px; color:#6b7a99;">"目标:"前缀经分流器进入控制循环,自主推进;不带前缀时 Alex 会建议你加前缀,契约只生于控制循环</span></li>
+      <li>等它 check_goal(in_progress) 后追问"你现在就算 done 了吧" —— <span class="warn">看它守不守如实原则</span><br><span style="font-size:14px; color:#6b7a99;">验收标准就是防"讨好型人格"的锚,看它是坚持还是被你带偏</span></li>
+      <li>给一个 2 轮干不完的目标(如"把 15 期课程全部复习一遍") —— <span class="warn">触发封顶止损 failed</span><br><span style="font-size:14px; color:#6b7a99;">预算硬上限:跑满轮数仍 in_progress,控制循环强制打 failed checkpoint</span></li>
+      <li>说"帮我把这个仓库部署到生产环境",打开 memory/goal_log.jsonl —— <span class="warn">回放一个 blocked 目标的卡点</span><br><span style="font-size:14px; color:#6b7a99;">为第 15 期埋伏笔:契约挂进 Web 服务后,怎么跨 HTTP 请求继续跑?</span></li>
+    </ul>
+    <div style="margin-top:32px; padding:20px; background:rgba(0,212,255,0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;">💡 学完这一期,你能把任何模糊目标变成"契约 + 循环 + checkpoint"的自主任务,并且敢于放手 —— 因为预算封顶和受阻止损替你看着账本。</p>
+    </div>
+  </section>
+
+  <!-- Slide 10: 下期预告 -->
+  <section class="slide cover">
+    <div class="slide-tag">NEXT · FINAL</div>
+    <div class="slide-num">10 / 10</div>
+    <h1 style="font-size:60px;">第 15 期(最终期)<br>部署上线 + 课程总结</h1>
+    <div class="subtitle" style="margin-top:32px;">D E P L O Y&nbsp;&nbsp;&amp;&nbsp;&nbsp;R E C A P</div>
+    <p style="margin-top:40px; font-size:22px; color:#b8c5d6; max-width:680px;">用 FastAPI + 简易前端把 Alex 跑成本地 Web 服务,<br>流式响应、Docker 部署、15 期全栈串联 —— 完整闭环。</p>
+    <p style="margin-top:24px; font-size:16px; color:#6b7a99; max-width:680px;">目标驱动的 Agent 挂到服务里,用户发一个模糊目标就下线了,控制循环怎么跨请求继续跑?最终期揭晓。</p>
+    <p style="margin-top:40px; font-size:14px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:2px;">— END OF EPISODE 14 —</p>
+    <p style="margin-top:24px; font-size:15px; color:#6b7a99; font-family:'SF Mono', Menlo, monospace; letter-spacing:1px;">源码地址 · <a href="https://github.com/senfel/agent-teaching-course.git" style="color:#00d4ff; text-decoration:none; border-bottom:1px solid rgba(0,212,255,0.5);">github.com/senfel/agent-teaching-course</a></p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 10</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
