@@ -1,0 +1,23 @@
+# 秘密与本地配置(绝不进镜像)
+.env
+.env.*
+.git
+.gitignore
+
+# Python 缓存与虚拟环境
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# 运行时产物(记忆/日志走挂卷,不打进镜像)
+memory/
+*.log
+.hooks_audit.jsonl
+.team/
+
+# IDE / 系统文件
+.idea/
+.vscode/
+.DS_Store

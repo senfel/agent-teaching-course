@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第 15 期 · 部署上线 + 课程总结</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: "SF Pro Display", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0e27; color: #e8ecf5; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.14) 0%, transparent 45%),
+      linear-gradient(180deg, #0a0e27 0%, #0d1b3e 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.12) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .slides { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+  .slide {
+    position: absolute; inset: 0; padding: 70px 90px 100px;
+    display: none; flex-direction: column; justify-content: center;
+    animation: fadeIn 0.45s ease-out;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-num { position: absolute; top: 40px; right: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .slide-tag { position: absolute; top: 40px; left: 90px; font-size: 14px; color: #00d4ff; letter-spacing: 3px; }
+  .slide-tag::before { content: "▎"; margin-right: 4px; }
+
+  h1 { font-size: 54px; margin-bottom: 24px; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; font-weight: 700; }
+  h2 { font-size: 34px; margin-bottom: 28px; color: #00d4ff; font-weight: 600; }
+  h3 { font-size: 22px; color: #e8ecf5; margin-bottom: 14px; font-weight: 600; }
+  p { font-size: 20px; line-height: 1.7; color: #b8c5d6; margin-bottom: 14px; }
+
+  .cover { justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { font-size: 70px; margin-bottom: 28px; }
+  .cover .subtitle { font-size: 22px; color: #00d4ff; margin-bottom: 60px; letter-spacing: 6px; }
+  .cover .meta { font-size: 15px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; letter-spacing: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 17px; }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+  th { color: #00d4ff; font-weight: 600; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(0, 212, 255, 0.06); }
+  td { color: #b8c5d6; }
+  td strong { color: #e8ecf5; }
+
+  pre { background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 8px; padding: 24px; margin: 16px 0; overflow-x: auto; }
+  pre code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 15px; line-height: 1.6; color: #a8b5cc; }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .com { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+
+  .hi { background: rgba(0, 212, 255, 0.16); padding: 2px 8px; border-radius: 4px; color: #00d4ff; }
+  .warn { background: rgba(255, 180, 0, 0.16); padding: 2px 8px; border-radius: 4px; color: #ffb400; }
+
+  ul, ol { padding-left: 0; list-style: none; }
+  ul li, ol li { font-size: 20px; line-height: 1.8; color: #b8c5d6; padding-left: 32px; position: relative; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00d4ff; }
+  ol { counter-reset: step; }
+  ol li { counter-increment: step; }
+  ol li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0; }
+  .col { background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.18); border-radius: 10px; padding: 24px; }
+  .col h3 { color: #00d4ff; margin-bottom: 12px; }
+
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 10; background: rgba(10, 14, 39, 0.85); backdrop-filter: blur(12px); padding: 10px 22px; border-radius: 50px; border: 1px solid rgba(0, 212, 255, 0.25); }
+  .nav button { background: transparent; border: 1px solid rgba(0, 212, 255, 0.4); color: #00d4ff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.2s; font-family: "SF Mono", Menlo, monospace; }
+  .nav button:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); transform: scale(1.05); }
+  .nav button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav .progress { color: #00d4ff; font-family: "SF Mono", Menlo, monospace; font-size: 14px; min-width: 56px; text-align: center; letter-spacing: 1px; }
+
+  .hint { position: fixed; bottom: 32px; right: 40px; font-size: 12px; color: #6b7a99; font-family: "SF Mono", Menlo, monospace; opacity: 0.6; }
+
+  .center-row { display: flex; align-items: center; justify-content: center; gap: 60px; flex-wrap: wrap; }
+  .big-num { font-size: 80px; font-weight: 800; background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; font-family: "SF Mono", Menlo, monospace; }
+  .big-label { font-size: 20px; color: #b8c5d6; margin-top: 8px; }
+  .arrow { font-size: 40px; color: #00d4ff; }
+  .flow { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin: 28px 0; }
+  .flow .box { background: rgba(0, 212, 255, 0.08); border: 1px solid rgba(0, 212, 255, 0.35); border-radius: 10px; padding: 16px 22px; text-align: center; }
+  .flow .box .t { font-size: 16px; color: #e8ecf5; font-weight: 600; }
+  .flow .box .d { font-size: 12px; color: #6b7a99; margin-top: 4px; font-family: "SF Mono", Menlo, monospace; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- Slide 1: 封面 -->
+  <section class="slide cover active">
+    <div class="slide-tag">AGENT COURSE · 15 · FINAL</div>
+    <div class="slide-num">01 / 10</div>
+    <h1>部署上线 + 课程总结</h1>
+    <div class="subtitle">D E P L O Y&nbsp;&nbsp;&amp;&nbsp;&nbsp;R E C A P</div>
+    <div class="meta">15 期系列 · 第 15 期(最终期) · 2026</div>
+    <p style="margin-top:48px; font-size:18px; color:#b8c5d6; max-width:700px;">前 14 期我们造了一台"发动机":记忆、工具、技能、子代理、团队、MCP、Hooks、路由、目标驱动,共 28 个工具。<br>这一期,把发动机装进一辆"能上路、能交付的车" —— Web UI + 流式响应 + Docker 部署,15 期全栈串联,完整闭环。</p>
+  </section>
+
+  <!-- Slide 2: 概念 -->
+  <section class="slide">
+    <div class="slide-tag">CONCEPT</div>
+    <div class="slide-num">02 / 10</div>
+    <h2>命令行 vs 上线 —— 差在哪</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>⌨️ 命令行(第 14 期及以前)</h3>
+        <p style="font-size:18px;">开终端,`python -m` 起进程,黑窗口对话</p>
+        <p style="font-size:18px;">LLM 算完<span class="warn">整段一次性 print</span>,干等无反馈</p>
+        <p style="font-size:18px;">"我机器上能跑",<span class="warn">换环境手搓一遍</span></p>
+      </div>
+      <div class="col" style="border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.1);">
+        <h3>🌐 上线(本期)</h3>
+        <p style="font-size:18px;">浏览器打开即用(<span class="hi">http://localhost:8000</span>)</p>
+        <p style="font-size:18px;"><span class="hi">SSE 流式</span>—— 打字机体验,逐字到前端</p>
+        <p style="font-size:18px;"><span class="hi">会话列表/续聊</span>—— 左侧栏回放历史,重启不丢上下文</p>
+        <p style="font-size:18px;"><span class="hi">Docker</span>—— 一次构建,处处可跑</p>
+      </div>
+    </div>
+    <p style="text-align:center; margin-top:24px; font-size:22px; color:#00d4ff;">内核一行不改,只加<span class="hi">外壳 + 交付</span></p>
+    <p style="text-align:center; margin-top:16px; font-size:16px; color:#6b7a99;">前 14 期的全部 Agent 能力(记忆/工具/技能/子代理/团队/MCP/Hooks/路由/目标驱动)一个没动,只是从"一个进程里的函数"变成"一个服务里的端点"。</p>
+  </section>
+
+  <!-- Slide 3: 三大交付物 -->
+  <section class="slide">
+    <div class="slide-tag">DELIVERABLES</div>
+    <div class="slide-num">03 / 10</div>
+    <h2>本期三件事,装车三步</h2>
+    <ol>
+      <li><strong>Web UI(FastAPI + 内嵌前端)</strong> — 六个端点 `/health`、`/goal`、`/sessions`(会话列表)、`/history/{id}`(回放续聊)、`/`(HTML)、`/chat`(SSE);双入口 `python -m step15_deploy`(Web)/ `--cli`(命令行),共用同一条 `build_system_prompt()`</li>
+      <li><strong>流式响应(SSE)</strong> — `llm_call_stream`(`stream=True`)→ `stream.py` 把增量 yield 成事件 → `StreamingResponse` 推给浏览器,`fetch` 逐块读</li>
+      <li><strong>Docker 部署</strong> — Dockerfile 分层缓存 + docker-compose(env 注入 API Key、memory 挂卷持久化)+ .dockerignore</li>
+    </ol>
+    <div class="flow">
+      <div class="box"><div class="t">Web UI</div><div class="d">黑窗口 → 浏览器</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><div class="t">SSE 流式</div><div class="d">整段 → 逐字</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><div class="t">Docker</div><div class="d">单机 → 处处跑</div></div>
+    </div>
+  </section>
+
+  <!-- Slide 4: 课程地图 -->
+  <section class="slide">
+    <div class="slide-tag">ROADMAP</div>
+    <div class="slide-num">04 / 10</div>
+    <h2>15 期课程地图 · 最终期位置</h2>
+    <table>
+      <thead>
+        <tr><th>篇章</th><th>期号</th><th>核心能力</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>准备篇</strong></td><td>01</td><td>认识 Agent + 开工准备</td></tr>
+        <tr><td><strong>基础篇</strong></td><td>02-06</td><td>循环 · history · system prompt · tool · skills</td></tr>
+        <tr><td><strong>进阶篇</strong></td><td>07-10</td><td>记忆 · 规划 · 子代理 · 团队</td></tr>
+        <tr><td><strong>高阶篇</strong></td><td>11-13</td><td>MCP · Hooks · 多模型路由</td></tr>
+        <tr><td><strong>实战篇</strong></td><td>14</td><td>目标驱动:契约 + 控制循环 + checkpoint</td></tr>
+        <tr><td><strong>实战篇</strong></td><td><span class="hi">15(本期)</span></td><td><strong>部署上线 + 课程总结:Web UI + 流式 + Docker</strong></td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:20px; font-size:16px; color:#6b7a99;">从第 01 期"认识 Agent"到第 15 期"能对外服务",15 期全栈串联。本期收官:把攒满能力的 Alex 装进浏览器 + 流式 + Docker 的交付壳。</p>
+  </section>
+
+  <!-- Slide 5: 请求一图流 -->
+  <section class="slide">
+    <div class="slide-tag">ARCHITECTURE</div>
+    <div class="slide-num">05 / 10</div>
+    <h2>一个请求怎么流动</h2>
+    <div class="flow">
+      <div class="box"><div class="t">浏览器</div><div class="d">fetch POST /chat</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><div class="t">FastAPI</div><div class="d">chat() 读消息</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><div class="t">SSE</div><div class="d">StreamingResponse</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><div class="t">流式循环</div><div class="d">stream_chat_with_tools</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><div class="t">浏览器</div><div class="d">getReader 逐块读</div></div>
+    </div>
+    <ol style="margin-top:18px;">
+      <li><strong>_get_messages(session_id)</strong> — 按会话取(建)上下文,system 来自 `build_system_prompt()`</li>
+      <li><strong>append_and_persist</strong> — 落盘 user 消息(与 CLI 同款事件溯源)</li>
+      <li><strong>trim_history / compact_history</strong> — 截断 + 压缩(复用记忆层)</li>
+      <li><strong>stream_chat_with_tools</strong> — 流式工具循环 yield 事件</li>
+      <li>每个事件 `json.dumps` → `data: {...}\n\n`,最后 `data: [DONE]`</li>
+    </ol>
+  </section>
+
+  <!-- Slide 6: 流式 vs 非流式 & SSE -->
+  <section class="slide">
+    <div class="slide-tag">STREAMING</div>
+    <div class="slide-num">06 / 10</div>
+    <h2>为什么是 SSE,不是 WebSocket</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>📡 SSE(本期)</h3>
+        <p style="font-size:17px;">单向:服务端 → 客户端</p>
+        <p style="font-size:17px;">纯 HTTP,`text/event-stream`</p>
+        <p style="font-size:17px;">`fetch` + `getReader()` 原生读</p>
+        <p style="font-size:17px;"><span class="hi">适合"AI 打字机"</span>:发一条,连续吐多个事件直到 done</p>
+      </div>
+      <div class="col">
+        <h3>🔌 WebSocket(不用)</h3>
+        <p style="font-size:17px;">双向:双方互相推</p>
+        <p style="font-size:17px;">升级长连接协议</p>
+        <p style="font-size:17px;">需 WebSocket API</p>
+        <p style="font-size:17px;"><span class="warn">对聊天反而重</span>:用不上双向</p>
+      </div>
+    </div>
+    <p style="margin-top:16px; font-size:18px; color:#e8ecf5; text-align:center;">核心坑:<span class="warn">流式 tool_calls 的 id/name/arguments 是分片到达的</span> —— `stream.py` 按 `tc.index` 累积分片,攒齐再执行</p>
+  </section>
+
+  <!-- Slide 7: 代码 -->
+  <section class="slide">
+    <div class="slide-tag">CODE</div>
+    <div class="slide-num">07 / 10</div>
+    <h2>核心代码 · 流式工具循环</h2>
+    <pre style="margin:0;"><code><span class="com"># stream.py:与非流式孪生,唯一区别是"边生成边 yield"</span>
+<span class="kw">while</span> <span class="var">True</span>:
+    content_parts, tool_calls = [], {}   <span class="com"># index → {id,name,arguments}</span>
+    <span class="kw">for</span> delta, model_id <span class="kw">in</span> <span class="fn">llm_call_stream</span>(messages, tools=TOOLS):
+        <span class="kw">if</span> delta.content:                     <span class="com"># 文本增量 → 立刻吐给前端</span>
+            <span class="kw">yield</span> {<span class="str">"event"</span>: <span class="str">"delta"</span>, <span class="str">"text"</span>: delta.content}
+        <span class="kw">for</span> tc <span class="kw">in</span> (delta.tool_calls <span class="kw">or</span> []):   <span class="com"># 工具调用按 index 攒,别漏别错位</span>
+            s = tool_calls.setdefault(tc.index, {<span class="str">"id"</span>:<span class="str">""</span>, <span class="str">"name"</span>:<span class="str">""</span>, <span class="str">"arguments"</span>:<span class="str">""</span>})
+            s[<span class="str">"name"</span>] += tc.function.name
+            s[<span class="str">"arguments"</span>] += tc.function.arguments
+    <span class="kw">if not</span> tool_calls:
+        <span class="kw">yield</span> {<span class="str">"event"</span>: <span class="str">"done"</span>, <span class="str">"text"</span>: <span class="str">""</span>.join(content_parts).strip()}; <span class="kw">return</span>
+    <span class="kw">for</span> slot <span class="kw">in</span> sorted_by_index(tool_calls):   <span class="com"># 攒齐 → 执行 → 回灌 → continue</span>
+        <span class="kw">yield</span> {<span class="str">"event"</span>: <span class="str">"tool_call"</span>, <span class="str">"name"</span>: slot[<span class="str">"name"</span>], ...}
+        <span class="kw">yield</span> {<span class="str">"event"</span>: <span class="str">"tool_result"</span>, <span class="str">"result"</span>: <span class="fn">_run_one_tool</span>(...)}</code></pre>
+    <p style="margin-top:14px; font-size:16px; color:#6b7a99;">`llm_call_stream` 与非流式 `llm_call` 只差 `stream=True` + `stream_options.include_usage`,路由、记账逻辑完全复用 —— 统一入口的纪律没被打破。</p>
+  </section>
+
+  <!-- Slide 8: Docker -->
+  <section class="slide">
+    <div class="slide-tag">DOCKER</div>
+    <div class="slide-num">08 / 10</div>
+    <h2>Docker:一次构建,处处可跑</h2>
+    <pre style="margin:0;"><code><span class="com"># Dockerfile 分层缓存:依赖最稳放最前,改代码只重建最后一层</span>
+<span class="kw">FROM</span> python:3.11-slim
+COPY requirements.txt /app/requirements.txt          <span class="com"># ① 依赖层(独立)</span>
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY code/step15_deploy/ templates/ skills/ mcp_servers/  <span class="com"># ② 运行时资源</span>
+CMD [<span class="str">"python"</span>, <span class="str">"-m"</span>, <span class="str">"step15_deploy"</span>]           <span class="com"># ③ 默认起 Web</span>
+
+<span class="com"># docker-compose.yml:env 注入 API Key + memory 挂卷持久化</span>
+services:
+  alex:
+    build: .
+    ports: [<span class="str">"8000:8000"</span>]
+    env_file: [<span class="str">".env"</span>]              <span class="com"># API Key 不进镜像</span>
+    volumes: [<span class="str">"./memory:/app/memory"</span>]   <span class="com"># 容器销毁记忆不丢</span></code></pre>
+    <p style="margin-top:16px; font-size:16px; color:#6b7a99;">标准交付:`cp .env.example .env` → `docker compose up --build` → 打开 http://localhost:8000。改代码再 build,依赖层缓存命中、只重建源码层。</p>
+  </section>
+
+  <!-- Slide 9: 试一试 -->
+  <section class="slide">
+    <div class="slide-tag">TRY IT</div>
+    <div class="slide-num">09 / 10</div>
+    <h2>试一试 · 6 个实验</h2>
+    <ul>
+      <li>问一个要写长回答的问题 —— <span class="hi">体验打字机流式</span><br><span style="font-size:14px; color:#6b7a99;">文字逐字冒出来,不是整块弹出</span></li>
+      <li>问一个会触发工具的问题 —— <span class="hi">看工具实时播报</span><br><span style="font-size:14px; color:#6b7a99;">"🔧 调用工具 / ✅ 完成"气泡与文字流交织</span></li>
+      <li>`--cli` 发同一条消息 —— <span class="hi">对比流式 vs 非流式</span><br><span style="font-size:14px; color:#6b7a99;">内核一样,外壳不同:浏览器逐字 vs 终端整段</span></li>
+      <li>Web 里用 `目标:` 订目标,再点"🎯 目标"/刷新 —— <span class="warn">验证 GOAL_STATE 跨请求存活</span><br><span style="font-size:14px; color:#6b7a99;">第 14 期伏笔回收:模块级全局变量跨 HTTP 请求幸存</span></li>
+      <li>左侧「🗂 会话」栏 —— <span class="hi">看会话列表并续聊</span><br><span style="font-size:14px; color:#6b7a99;">点任意历史会话回放记录,刷新/重启后再点可接着聊</span></li>
+      <li>`docker compose up --build` —— <span class="warn">体验一次性交付</span><br><span style="font-size:14px; color:#6b7a99;">观察依赖层缓存命中、只重建源码层</span></li>
+    </ul>
+  </section>
+
+  <!-- Slide 10: 课程总结 -->
+  <section class="slide">
+    <div class="slide-tag">RECAP</div>
+    <div class="slide-num">10 / 10</div>
+    <h2>15 期全栈串联 · 三条暗线</h2>
+    <table>
+      <thead><tr><th>期</th><th>核心能力</th><th>类比</th></tr></thead>
+      <tbody>
+        <tr><td>01</td><td>认识 Agent + 开工</td><td>婴儿出生</td></tr>
+        <tr><td>02-03</td><td>连续对话 → 短期记忆</td><td>金鱼记忆 → 记住上一句</td></tr>
+        <tr><td>04-05</td><td>人设 + 工具调用</td><td>有身份 + 有手</td></tr>
+        <tr><td>06-08</td><td>技能 + 记忆 + 规划</td><td>有技能库 + 有脑子 + 有条理</td></tr>
+        <tr><td>09-10</td><td>子代理 + 团队</td><td>有分身 + 有团队</td></tr>
+        <tr><td>11-12</td><td>MCP + Hooks</td><td>有插座 + 有安检</td></tr>
+        <tr><td>13</td><td>多模型路由</td><td>有调度台</td></tr>
+        <tr><td>14</td><td>目标驱动 Agent</td><td>有目标感</td></tr>
+        <tr><td><span class="hi">15</span></td><td><strong>部署上线 + 课程总结</strong></td><td><strong>能上路(Web + 流式 + Docker)</strong></td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:20px; padding:18px; background:rgba(0,212,255,0.06); border-left:3px solid #00d4ff; border-radius:0 8px 8px 0;">
+      <p style="margin:0; font-size:17px; color:#b8c5d6;"><strong style="color:#e8ecf5;">三条贯穿全课程的暗线:</strong>① 事件溯源(消息产生即落盘,记忆可回放)② 统一入口(工具走 execute_tool、LLM 走 llm_call、能力走 build_system_prompt)③ 审计可观测(audit_log 合规 + usage_log 成本 + goal_log 进度)。</p>
+    </div>
+    <p style="margin-top:22px; text-align:center; font-size:22px; color:#00d4ff;">终点亦是起点 —— 骨架已搭好,往哪长取决于你</p>
+  </section>
+
+</div>
+
+<!-- 导航 -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)">‹</button>
+  <span class="progress" id="progress">01 / 10</span>
+  <button id="nextBtn" onclick="go(1)">›</button>
+</div>
+<div class="hint">← → 切换 · F 全屏</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function show(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    progress.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1);
+  }
+  function go(n) { show(current + n); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>

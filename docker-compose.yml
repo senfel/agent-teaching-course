@@ -1,0 +1,19 @@
+# 一键起服务:dock compose up --build
+# 前提:项目根目录有 .env(cp .env.example .env 并填 DEEPSEEK_API_KEY)
+# 打开 http://localhost:8000 即看到 Alex 的 Web UI
+services:
+  alex:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: alex-web
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env                # API Key 走环境变量注入,不打进镜像
+    environment:
+      - AGENT_WEB_HOST=0.0.0.0
+      - AGENT_WEB_PORT=8000
+    volumes:
+      - ./memory:/app/memory   # 记忆/审计/账单落盘到宿主机,容器销毁不丢
+    restart: unless-stopped
